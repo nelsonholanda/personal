@@ -7,7 +7,7 @@ echo "🚀 Iniciando deploy do NH-Personal na EC2 (Amazon Linux 2023)..."
 # 1. Atualizar sistema e instalar dependências
 echo "📦 Atualizando sistema e instalando dependências..."
 sudo dnf update -y
-sudo dnf install -y git curl wget
+sudo dnf install -y git wget unzip jq
 
 # 2. Instalar Docker
 echo "🐳 Instalando Docker..."

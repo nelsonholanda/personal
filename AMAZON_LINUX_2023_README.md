@@ -26,6 +26,18 @@ Script completo otimizado para Amazon Linux 2023:
 - Limpeza automática de recursos Docker
 - Logs coloridos e detalhados
 
+### Opção 3: Script Sem Dependência do curl (Alternativa)
+Se você estiver enfrentando problemas com o curl, use esta versão:
+```bash
+# Conectar via SSH
+ssh -i sua-chave.pem ec2-user@seu-ip-ec2
+
+# Baixar e executar o script (usando wget)
+wget https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPOSITORIO/main/deploy-amazon-linux-2023-no-curl.sh
+chmod +x deploy-amazon-linux-2023-no-curl.sh
+./deploy-amazon-linux-2023-no-curl.sh
+```
+
 ## 🔧 Como Usar
 
 ### Opção 1: Script Básico
@@ -48,6 +60,54 @@ ssh -i sua-chave.pem ec2-user@seu-ip-ec2
 curl -O https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPOSITORIO/main/deploy-amazon-linux-2023.sh
 chmod +x deploy-amazon-linux-2023.sh
 ./deploy-amazon-linux-2023.sh
+```
+
+## 🚨 Resolução de Problemas
+
+### Conflito do curl
+Se você encontrar um erro de conflito do curl como este:
+```
+Problem: problem with installed package curl-minimal-8.11.1-4.amzn2023.0.1.x86_64
+- package curl-minimal-8.11.1-4.amzn2023.0.1.x86_64 from @System conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+```
+
+**Solução 1: Usar o script de resolução**
+```bash
+# Baixar e executar o script de resolução
+curl -O https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPOSITORIO/main/fix-curl-conflict.sh
+chmod +x fix-curl-conflict.sh
+./fix-curl-conflict.sh
+```
+
+**Solução 2: Resolução manual**
+```bash
+# Opção A: Permitir substituição de pacotes
+sudo dnf install -y --allowerasing curl
+
+# Opção B: Remover curl-minimal e instalar curl completo
+sudo dnf remove -y curl-minimal
+sudo dnf install -y curl
+
+# Opção C: Usar curl-minimal (geralmente funciona)
+# Não fazer nada - curl-minimal é suficiente para o deploy
+```
+
+**Solução 3: Pular pacotes problemáticos
+```bash
+# Continuar com a instalação ignorando conflitos
+sudo dnf install -y --skip-broken git wget unzip jq
+```
+
+### Verificar se curl está funcionando
+```bash
+# Testar funcionalidade básica
+curl --version
+
+# Testar download
+curl -L -o /tmp/test https://httpbin.org/bytes/100
+
+# Testar requisição HTTP
+curl -s https://httpbin.org/get
 ```
 
 ## 🔄 Principais Diferenças do Amazon Linux 2023

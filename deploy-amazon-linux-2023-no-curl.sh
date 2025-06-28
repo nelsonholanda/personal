@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Script de Deploy para Amazon Linux 2023 - NH Personal Trainer
-# Versão: 2.0.0 - Amazon Linux 2023
+# Versão: 2.1.0 - Amazon Linux 2023 (Sem dependência do curl)
 
 set -e  # Para o script se houver erro
 
-echo "🚀 Iniciando deploy para Amazon Linux 2023..."
+echo "🚀 Iniciando deploy para Amazon Linux 2023 (versão sem curl)..."
 
 # Cores para output
 RED='\033[0;31m'
@@ -48,17 +48,9 @@ fi
 log "🔄 Atualizando sistema..."
 sudo dnf update -y
 
-# Instalar dependências básicas
+# Instalar dependências básicas (sem curl)
 log "📦 Instalando dependências básicas..."
 sudo dnf install -y git wget unzip jq
-
-# Verificar se curl está disponível (curl-minimal já vem instalado no Amazon Linux 2023)
-if ! command -v curl &> /dev/null; then
-    log "⚠️ curl não encontrado, instalando..."
-    sudo dnf install -y curl
-else
-    log "✅ curl já está disponível (curl-minimal)"
-fi
 
 success "Dependências básicas instaladas"
 
@@ -75,10 +67,10 @@ sudo usermod -aG docker $USER
 
 success "Docker instalado e configurado"
 
-# Instalar Docker Compose
+# Instalar Docker Compose usando wget
 log "📦 Instalando Docker Compose..."
-DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)
-sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+DOCKER_COMPOSE_VERSION=$(wget -qO- https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)
+sudo wget -O /usr/local/bin/docker-compose "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)"
 sudo chmod +x /usr/local/bin/docker-compose
 
 # Criar link simbólico
@@ -256,8 +248,8 @@ sudo chmod +x /etc/cron.daily/docker-cleanup
 
 success "Limpeza automática configurada"
 
-# Obter IP público da instância
-PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+# Obter IP público da instância usando wget
+PUBLIC_IP=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4)
 
 echo ""
 echo "🎉 DEPLOY CONCLUÍDO COM SUCESSO!"
