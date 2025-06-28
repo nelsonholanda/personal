@@ -1,0 +1,496 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    Int       @id @default(autoincrement())
+  name                  String    @db.VarChar(255)
+  email                 String    @unique @db.VarChar(255)
+  passwordHash          String    @map("password_hash") @db.VarChar(255)
+  role                  UserRole  @default(client)
+  phone                 String?   @db.VarChar(20)
+  birthDate             DateTime? @map("birth_date") @db.Date
+  gender                Gender?
+  height                Decimal?  @db.Decimal(5, 2)
+  weight                Decimal?  @db.Decimal(5, 2)
+  profileImageUrl       String?   @map("profile_image_url") @db.VarChar(500)
+  isActive              Boolean   @default(true) @map("is_active")
+  passwordChangedAt     DateTime  @default(now()) @map("password_changed_at")
+  passwordResetToken    String?   @map("password_reset_token") @db.VarChar(255)
+  passwordResetExpires  DateTime? @map("password_reset_expires")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  trainerProfile    TrainerProfile?
+  clientProfile     ClientProfile?
+  clientManagementAsTrainer ClientManagement[] @relation("TrainerClients")
+  clientManagementAsClient ClientManagement[] @relation("ClientTrainers")
+  trainingPlansAsTrainer TrainingPlan[] @relation("TrainerPlans")
+  trainingPlansAsClient TrainingPlan[] @relation("ClientPlans")
+  workoutSessions   WorkoutSession[]
+  progressMeasurements ProgressMeasurement[]
+  appointmentsAsTrainer Appointment[] @relation("TrainerAppointments")
+  appointmentsAsClient Appointment[] @relation("ClientAppointments")
+  sentMessages      Message[] @relation("SentMessages")
+  receivedMessages  Message[] @relation("ReceivedMessages")
+  notifications     Notification[]
+  financialReports  FinancialReport[]
+  passwordHistory   PasswordHistory[]
+
+  @@map("users")
+}
+
+model PasswordHistory {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  changedAt    DateTime @default(now()) @map("changed_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_history")
+}
+
+model TrainerProfile {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @unique @map("user_id")
+  specialization  String?   @db.Text
+  experienceYears Int?      @map("experience_years")
+  certifications  String?   @db.Text
+  bio             String?   @db.Text
+  hourlyRate      Decimal?  @map("hourly_rate") @db.Decimal(10, 2)
+  availability    Json?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("trainer_profiles")
+}
+
+model ClientProfile {
+  id                Int       @id @default(autoincrement())
+  userId            Int       @unique @map("user_id")
+  fitnessGoals      String?   @map("fitness_goals") @db.Text
+  medicalConditions String?   @map("medical_conditions") @db.Text
+  emergencyContact  String?   @map("emergency_contact") @db.VarChar(255)
+  emergencyPhone    String?   @map("emergency_phone") @db.VarChar(20)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("client_profiles")
+}
+
+model ClientManagement {
+  id                    Int                @id @default(autoincrement())
+  trainerId             Int                @map("trainer_id")
+  clientId              Int                @map("client_id")
+  status                ClientManagementStatus @default(active)
+  startDate             DateTime           @map("start_date") @db.Date
+  endDate               DateTime?          @map("end_date") @db.Date
+  weeklySessions        Int                @default(3) @map("weekly_sessions")
+  sessionDurationMinutes Int               @default(60) @map("session_duration_minutes")
+  notes                 String?            @db.Text
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  trainer User @relation("TrainerClients", fields: [trainerId], references: [id], onDelete: Cascade)
+  client  User @relation("ClientTrainers", fields: [clientId], references: [id], onDelete: Cascade)
+  subscriptions ClientSubscription[]
+
+  @@unique([trainerId, clientId])
+  @@map("client_management")
+}
+
+model PaymentPlan {
+  id              Int       @id @default(autoincrement())
+  name            String    @db.VarChar(255)
+  description     String?   @db.Text
+  price           Decimal   @db.Decimal(10, 2)
+  durationWeeks   Int       @map("duration_weeks")
+  sessionsPerWeek Int       @map("sessions_per_week")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  subscriptions ClientSubscription[]
+
+  @@map("payment_plans")
+}
+
+model ClientSubscription {
+  id                Int                    @id @default(autoincrement())
+  clientManagementId Int                   @map("client_management_id")
+  paymentPlanId     Int                    @map("payment_plan_id")
+  startDate         DateTime               @map("start_date") @db.Date
+  endDate           DateTime               @map("end_date") @db.Date
+  totalSessions     Int                    @map("total_sessions")
+  sessionsUsed      Int                    @default(0) @map("sessions_used")
+  status            SubscriptionStatus     @default(active)
+  createdAt         DateTime               @default(now()) @map("created_at")
+  updatedAt         DateTime               @updatedAt @map("updated_at")
+
+  // Relations
+  clientManagement ClientManagement @relation(fields: [clientManagementId], references: [id], onDelete: Cascade)
+  paymentPlan      PaymentPlan      @relation(fields: [paymentPlanId], references: [id], onDelete: Cascade)
+  payments         Payment[]
+
+  @@map("client_subscriptions")
+}
+
+model PaymentMethod {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  payments Payment[]
+
+  @@map("payment_methods")
+}
+
+model Payment {
+  id                    Int              @id @default(autoincrement())
+  clientSubscriptionId  Int              @map("client_subscription_id")
+  paymentMethodId       Int              @map("payment_method_id")
+  amount                Decimal          @db.Decimal(10, 2)
+  paymentDate           DateTime         @map("payment_date") @db.Date
+  dueDate               DateTime         @map("due_date") @db.Date
+  status                PaymentStatus    @default(pending)
+  paymentReference      String?          @map("payment_reference") @db.VarChar(255)
+  notes                 String?          @db.Text
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  clientSubscription ClientSubscription @relation(fields: [clientSubscriptionId], references: [id], onDelete: Cascade)
+  paymentMethod      PaymentMethod      @relation(fields: [paymentMethodId], references: [id], onDelete: Cascade)
+  installments       PaymentInstallment[]
+
+  @@map("payments")
+}
+
+model PaymentInstallment {
+  id               Int             @id @default(autoincrement())
+  paymentId        Int             @map("payment_id")
+  installmentNumber Int            @map("installment_number")
+  amount           Decimal         @db.Decimal(10, 2)
+  dueDate          DateTime        @map("due_date") @db.Date
+  paymentDate      DateTime?       @map("payment_date") @db.Date
+  status           PaymentStatus   @default(pending)
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@map("payment_installments")
+}
+
+model TrainingPlan {
+  id            Int              @id @default(autoincrement())
+  trainerId     Int              @map("trainer_id")
+  clientId      Int              @map("client_id")
+  name          String           @db.VarChar(255)
+  description   String?          @db.Text
+  durationWeeks Int?             @map("duration_weeks")
+  status        TrainingPlanStatus @default(active)
+  startDate     DateTime?        @map("start_date") @db.Date
+  endDate       DateTime?        @map("end_date") @db.Date
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  trainer User @relation("TrainerPlans", fields: [trainerId], references: [id], onDelete: Cascade)
+  client  User @relation("ClientPlans", fields: [clientId], references: [id], onDelete: Cascade)
+  workouts Workout[]
+
+  @@map("training_plans")
+}
+
+model Workout {
+  id              Int            @id @default(autoincrement())
+  trainingPlanId  Int            @map("training_plan_id")
+  name            String         @db.VarChar(255)
+  description     String?        @db.Text
+  durationMinutes Int?           @map("duration_minutes")
+  difficultyLevel DifficultyLevel
+  dayOfWeek       Int?           @map("day_of_week")
+  orderInPlan     Int?           @map("order_in_plan")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  trainingPlan     TrainingPlan      @relation(fields: [trainingPlanId], references: [id], onDelete: Cascade)
+  workoutExercises WorkoutExercise[]
+  workoutSessions  WorkoutSession[]
+
+  @@map("workouts")
+}
+
+model Exercise {
+  id              Int            @id @default(autoincrement())
+  name            String         @db.VarChar(255)
+  description     String?        @db.Text
+  muscleGroups    Json?          @map("muscle_groups")
+  equipmentNeeded Json?          @map("equipment_needed")
+  difficultyLevel DifficultyLevel
+  videoUrl        String?        @map("video_url") @db.VarChar(500)
+  imageUrl        String?        @map("image_url") @db.VarChar(500)
+  instructions    String?        @db.Text
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  workoutExercises WorkoutExercise[]
+  exerciseLogs     ExerciseLog[]
+
+  @@map("exercises")
+}
+
+model WorkoutExercise {
+  id             Int      @id @default(autoincrement())
+  workoutId      Int      @map("workout_id")
+  exerciseId     Int      @map("exercise_id")
+  sets           Int?
+  reps           Int?
+  durationSeconds Int?    @map("duration_seconds")
+  restSeconds    Int?     @map("rest_seconds")
+  weightKg       Decimal? @map("weight_kg") @db.Decimal(5, 2)
+  orderInWorkout Int?     @map("order_in_workout")
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  workout  Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@map("workout_exercises")
+}
+
+model WorkoutSession {
+  id          Int                @id @default(autoincrement())
+  clientId    Int                @map("client_id")
+  workoutId   Int                @map("workout_id")
+  sessionDate DateTime           @map("session_date") @db.Date
+  startTime   DateTime?          @map("start_time") @db.Time
+  endTime     DateTime?          @map("end_time") @db.Time
+  status      WorkoutSessionStatus @default(planned)
+  notes       String?            @db.Text
+  rating      Int?
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  client        User          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  workout       Workout       @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exerciseLogs  ExerciseLog[]
+
+  @@map("workout_sessions")
+}
+
+model ExerciseLog {
+  id                Int      @id @default(autoincrement())
+  workoutSessionId  Int      @map("workout_session_id")
+  exerciseId        Int      @map("exercise_id")
+  setsCompleted     Int?     @map("sets_completed")
+  repsCompleted     Int?     @map("reps_completed")
+  durationSeconds   Int?     @map("duration_seconds")
+  weightKg          Decimal? @map("weight_kg") @db.Decimal(5, 2)
+  notes             String?  @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  // Relations
+  workoutSession WorkoutSession @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
+  exercise       Exercise       @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@map("exercise_logs")
+}
+
+model ProgressMeasurement {
+  id                Int      @id @default(autoincrement())
+  clientId          Int      @map("client_id")
+  measurementDate   DateTime @map("measurement_date") @db.Date
+  weightKg          Decimal? @map("weight_kg") @db.Decimal(5, 2)
+  bodyFatPercentage Decimal? @map("body_fat_percentage") @db.Decimal(4, 2)
+  muscleMassKg      Decimal? @map("muscle_mass_kg") @db.Decimal(5, 2)
+  chestCm           Decimal? @map("chest_cm") @db.Decimal(5, 2)
+  waistCm           Decimal? @map("waist_cm") @db.Decimal(5, 2)
+  hipsCm            Decimal? @map("hips_cm") @db.Decimal(5, 2)
+  bicepsCm          Decimal? @map("biceps_cm") @db.Decimal(5, 2)
+  thighsCm          Decimal? @map("thighs_cm") @db.Decimal(5, 2)
+  notes             String?  @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  // Relations
+  client User @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("progress_measurements")
+}
+
+model Appointment {
+  id            Int              @id @default(autoincrement())
+  trainerId     Int              @map("trainer_id")
+  clientId      Int              @map("client_id")
+  appointmentDate DateTime       @map("appointment_date") @db.Date
+  startTime     DateTime         @map("start_time") @db.Time
+  endTime       DateTime         @map("end_time") @db.Time
+  type          AppointmentType
+  status        AppointmentStatus @default(scheduled)
+  notes         String?          @db.Text
+  location      String?          @db.VarChar(255)
+  isOnline      Boolean          @default(false) @map("is_online")
+  meetingLink   String?          @map("meeting_link") @db.VarChar(500)
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  trainer User @relation("TrainerAppointments", fields: [trainerId], references: [id], onDelete: Cascade)
+  client  User @relation("ClientAppointments", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("appointments")
+}
+
+model Message {
+  id          Int      @id @default(autoincrement())
+  senderId    Int      @map("sender_id")
+  receiverId  Int      @map("receiver_id")
+  messageText String   @map("message_text") @db.Text
+  isRead      Boolean  @default(false) @map("is_read")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int              @map("user_id")
+  title     String           @db.VarChar(255)
+  message   String           @db.Text
+  type      NotificationType
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model FinancialReport {
+  id             Int      @id @default(autoincrement())
+  trainerId      Int      @map("trainer_id")
+  reportDate     DateTime @map("report_date") @db.Date
+  totalReceived  Decimal  @default(0) @map("total_received") @db.Decimal(12, 2)
+  totalPending   Decimal  @default(0) @map("total_pending") @db.Decimal(12, 2)
+  totalOverdue   Decimal  @default(0) @map("total_overdue") @db.Decimal(12, 2)
+  activeClients  Int      @default(0) @map("active_clients")
+  totalSessions  Int      @default(0) @map("total_sessions")
+  reportData     Json?    @map("report_data")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  trainer User @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@map("financial_reports")
+}
+
+// Enums
+enum UserRole {
+  trainer
+  client
+  admin
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum ClientManagementStatus {
+  active
+  inactive
+  suspended
+  completed
+}
+
+enum SubscriptionStatus {
+  active
+  completed
+  cancelled
+  expired
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  overdue
+  cancelled
+}
+
+enum TrainingPlanStatus {
+  active
+  completed
+  paused
+  cancelled
+}
+
+enum DifficultyLevel {
+  beginner
+  intermediate
+  advanced
+}
+
+enum WorkoutSessionStatus {
+  planned
+  in_progress
+  completed
+  skipped
+}
+
+enum AppointmentType {
+  consultation
+  training
+  assessment
+  follow_up
+}
+
+enum AppointmentStatus {
+  scheduled
+  confirmed
+  completed
+  cancelled
+  no_show
+}
+
+enum NotificationType {
+  appointment
+  workout
+  message
+  progress
+  payment
+  system
+} 
