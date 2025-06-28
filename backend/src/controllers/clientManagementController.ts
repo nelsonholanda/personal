@@ -77,21 +77,21 @@ export const clientManagementController = {
       ]);
 
       // Calcular estatísticas financeiras para cada cliente
-      const clientsWithStats = clients.map(client => {
-        const totalPaid = client.subscriptions.reduce((sum, sub) => {
-          return sum + sub.payments.reduce((paymentSum, payment) => {
+      const clientsWithStats = clients.map((client: any) => {
+        const totalPaid = client.subscriptions.reduce((sum: number, sub: any) => {
+          return sum + sub.payments.reduce((paymentSum: number, payment: any) => {
             return paymentSum + (payment.status === 'paid' ? Number(payment.amount) : 0);
           }, 0);
         }, 0);
 
-        const totalPending = client.subscriptions.reduce((sum, sub) => {
-          return sum + sub.payments.reduce((paymentSum, payment) => {
+        const totalPending = client.subscriptions.reduce((sum: number, sub: any) => {
+          return sum + sub.payments.reduce((paymentSum: number, payment: any) => {
             return paymentSum + (payment.status === 'pending' ? Number(payment.amount) : 0);
           }, 0);
         }, 0);
 
-        const totalOverdue = client.subscriptions.reduce((sum, sub) => {
-          return sum + sub.payments.reduce((paymentSum, payment) => {
+        const totalOverdue = client.subscriptions.reduce((sum: number, sub: any) => {
+          return sum + sub.payments.reduce((paymentSum: number, payment: any) => {
             return paymentSum + (payment.status === 'overdue' ? Number(payment.amount) : 0);
           }, 0);
         }, 0);

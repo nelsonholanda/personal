@@ -2,24 +2,40 @@
 
 set -e  # Exit on any error
 
-echo "🚀 Iniciando deploy do NH-Personal na EC2..."
+echo "🚀 Iniciando deploy do NH-Personal na EC2 (Amazon Linux 2023)..."
 
-# 1. Instalar Docker e Docker Compose
-echo "📦 Instalando Docker e Docker Compose..."
-sudo apt update
-sudo apt install -y docker.io docker-compose git curl
+# 1. Atualizar sistema e instalar dependências
+echo "📦 Atualizando sistema e instalando dependências..."
+sudo dnf update -y
+sudo dnf install -y git curl wget
+
+# 2. Instalar Docker
+echo "🐳 Instalando Docker..."
+sudo dnf install -y docker
+
+# Iniciar e habilitar o serviço Docker
+sudo systemctl start docker
+sudo systemctl enable docker
 
 # Adicionar usuário ao grupo docker
 sudo usermod -aG docker $USER
 
-# 2. Clonar o repositório (ajuste a URL se necessário)
+# 3. Instalar Docker Compose
+echo "📦 Instalando Docker Compose..."
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Criar link simbólico para docker-compose
+sudo ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+
+# 4. Clonar o repositório (ajuste a URL se necessário)
 echo "📥 Clonando repositório..."
 if [ ! -d "projeto-personal" ]; then
   git clone https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git projeto-personal
 fi
 cd projeto-personal
 
-# 3. Gerar arquivo .env de produção para o backend
+# 5. Gerar arquivo .env de produção para o backend
 echo "⚙️ Configurando variáveis de ambiente..."
 cat > backend/.env <<EOF
 ENCRYPTION_KEY=nh-personal-encryption-key-2024
@@ -39,32 +55,36 @@ JWT_REFRESH_TOKEN_SECRET=nh-personal-refresh-token-secret-2024
 # SMTP_FROM=noreply@nhpersonal.com
 EOF
 
-# 4. Gerar arquivo .env de produção para o frontend
+# 6. Gerar arquivo .env de produção para o frontend
 cat > frontend/.env <<EOF
 REACT_APP_API_URL=http://localhost:3001/api
 NODE_ENV=production
 EOF
 
-# 5. Build e up dos containers
+# 7. Recarregar grupos do usuário (para aplicar a adição ao grupo docker)
+echo "🔄 Recarregando grupos do usuário..."
+newgrp docker
+
+# 8. Build e up dos containers
 echo "🐳 Construindo e iniciando containers..."
 sudo docker-compose -f docker-compose.prod.yml up --build -d
 
-# 6. Aguardar o backend estar pronto
+# 9. Aguardar o backend estar pronto
 echo "⏳ Aguardando o backend estar pronto..."
 sleep 30
 
-# 7. Executar migrações e criar usuário admin
+# 10. Executar migrações e criar usuário admin
 echo "🗄️ Executando migrações do banco..."
 sudo docker-compose -f docker-compose.prod.yml exec -T backend npx prisma migrate deploy
 
 echo "👤 Criando usuário administrador..."
 sudo docker-compose -f docker-compose.prod.yml exec -T backend node scripts/create-admin-user.js
 
-# 8. Verificar status dos containers
+# 11. Verificar status dos containers
 echo "📊 Status dos containers:"
 sudo docker-compose -f docker-compose.prod.yml ps
 
-# 9. Logs iniciais
+# 12. Logs iniciais
 echo "📋 Logs recentes:"
 sudo docker-compose -f docker-compose.prod.yml logs --tail=20
 

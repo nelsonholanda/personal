@@ -372,7 +372,7 @@ export const paymentController = {
       // Atualizar parcelas se existirem
       if (updatedPayment.installments.length > 0) {
         await Promise.all(
-          updatedPayment.installments.map(installment =>
+          updatedPayment.installments.map((installment: any) =>
             prisma.paymentInstallment.update({
               where: { id: installment.id },
               data: {

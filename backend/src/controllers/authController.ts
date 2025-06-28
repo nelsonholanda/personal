@@ -274,5 +274,68 @@ export const authController = {
       success: true,
       message: 'Logout realizado com sucesso'
     });
+  },
+
+  // Refresh token
+  refreshToken: async (req: Request, res: Response) => {
+    try {
+      const { refreshToken } = req.body;
+
+      if (!refreshToken) {
+        return res.status(400).json({
+          success: false,
+          error: 'Refresh token é obrigatório'
+        });
+      }
+
+      // Verificar o refresh token
+      const decoded = jwt.verify(
+        refreshToken,
+        process.env.JWT_REFRESH_TOKEN_SECRET || 'nh-personal-refresh-token-secret-2024'
+      ) as any;
+
+      // Buscar o usuário
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          isActive: true
+        }
+      });
+
+      if (!user || !user.isActive) {
+        return res.status(401).json({
+          success: false,
+          error: 'Token inválido ou usuário inativo'
+        });
+      }
+
+      // Gerar novo access token
+      const newAccessToken = jwt.sign(
+        { userId: user.id, email: user.email, role: user.role },
+        process.env.JWT_ACCESS_TOKEN_SECRET || 'nh-personal-access-token-secret-2024',
+        { expiresIn: '24h' }
+      );
+
+      return res.json({
+        success: true,
+        data: {
+          accessToken: newAccessToken,
+          user: {
+            id: user.id,
+            email: user.email,
+            role: user.role
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Refresh token error:', error);
+      return res.status(401).json({
+        success: false,
+        error: 'Token inválido'
+      });
+    }
   }
 }; 
