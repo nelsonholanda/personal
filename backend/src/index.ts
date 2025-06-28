@@ -9,18 +9,8 @@ import dotenv from 'dotenv';
 
 // Import routes
 import authRoutes from './routes/auth';
-import userRoutes from './routes/users';
-import trainerRoutes from './routes/trainers';
-import clientRoutes from './routes/clients';
 import clientManagementRoutes from './routes/clientManagement';
 import paymentRoutes from './routes/payments';
-import trainingPlanRoutes from './routes/trainingPlans';
-import workoutRoutes from './routes/workouts';
-import exerciseRoutes from './routes/exercises';
-import appointmentRoutes from './routes/appointments';
-import progressRoutes from './routes/progress';
-import messageRoutes from './routes/messages';
-import notificationRoutes from './routes/notifications';
 import passwordRoutes from './routes/passwords';
 
 // Import middleware
@@ -93,18 +83,8 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/passwords', passwordRoutes);
-app.use('/api/users', authMiddleware, userRoutes);
-app.use('/api/trainers', authMiddleware, trainerRoutes);
-app.use('/api/clients', authMiddleware, clientRoutes);
 app.use('/api/client-management', authMiddleware, clientManagementRoutes);
 app.use('/api/payments', authMiddleware, paymentRoutes);
-app.use('/api/training-plans', authMiddleware, trainingPlanRoutes);
-app.use('/api/workouts', authMiddleware, workoutRoutes);
-app.use('/api/exercises', authMiddleware, exerciseRoutes);
-app.use('/api/appointments', authMiddleware, appointmentRoutes);
-app.use('/api/progress', authMiddleware, progressRoutes);
-app.use('/api/messages', authMiddleware, messageRoutes);
-app.use('/api/notifications', authMiddleware, notificationRoutes);
 
 // Error handling middleware
 app.use(notFound);

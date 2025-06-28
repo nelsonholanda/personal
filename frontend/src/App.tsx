@@ -11,12 +11,10 @@ import Footer from './components/Footer';
 import Layout from './components/Layout';
 
 // Pages
-import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
-import TrainingPlans from './pages/TrainingPlans';
 // import Workouts from './pages/Workouts';
 // import Appointments from './pages/Appointments';
 // import Progress from './pages/Progress';

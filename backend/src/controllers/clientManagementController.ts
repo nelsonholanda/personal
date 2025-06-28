@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient, Payment } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -409,7 +409,7 @@ export const clientManagementController = {
 
       const clientIds = new Set();
 
-      payments.forEach((payment: Payment) => {
+      payments.forEach((payment: any) => {
         const amount = Number(payment.amount);
         const clientId = payment.clientSubscription.clientManagement.client.id;
         const clientName = payment.clientSubscription.clientManagement.client.name;
