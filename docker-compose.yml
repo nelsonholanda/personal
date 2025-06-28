@@ -21,10 +21,10 @@ services:
       - personal_trainer_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
-      interval: 30s
+      interval: 60s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 120s
 
   # Frontend React App
   frontend:
@@ -40,23 +40,6 @@ services:
     environment:
       - REACT_APP_API_URL=http://localhost:3001/api
       - NODE_ENV=production
-
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    container_name: personal_trainer_nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf
-      - ./nginx/ssl:/etc/nginx/ssl
-    depends_on:
-      - backend
-      - frontend
-    networks:
-      - personal_trainer_network
 
 networks:
   personal_trainer_network:

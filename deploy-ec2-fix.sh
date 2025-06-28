@@ -60,9 +60,8 @@ docker-compose logs backend
 echo "📋 Logs do frontend:"
 docker-compose logs frontend
 
-echo "📋 Logs do nginx:"
-docker-compose logs nginx
-
 echo "🎉 Deploy corrigido!"
-echo "📱 Aplicação disponível em: http://localhost"
-echo "🔗 Health check: http://localhost/health" 
+echo "📱 Aplicação disponível em:"
+echo "   • Frontend: http://localhost:3000"
+echo "   • Backend API: http://localhost:3001"
+echo "   • Health Check: http://localhost:3001/health" 

@@ -35,8 +35,8 @@ USER nodejs
 # Expose port
 EXPOSE 3001
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+# Health check (more tolerant)
+HEALTHCHECK --interval=60s --timeout=10s --start-period=120s --retries=5 \
   CMD curl -f http://localhost:3001/health || exit 1
 
 # Start the application

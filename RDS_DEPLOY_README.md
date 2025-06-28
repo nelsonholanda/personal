@@ -96,7 +96,7 @@ docker ps
 docker-compose logs -f
 
 # Testar health check
-curl http://localhost/health
+curl http://localhost:3001/health
 ```
 
 ## 🔍 Troubleshooting
@@ -169,7 +169,6 @@ A aplicação expõe endpoints de health check:
 
 - **Backend:** `http://localhost:3001/health`
 - **Frontend:** `http://localhost:3000`
-- **Nginx:** `http://localhost`
 
 ### Logs
 

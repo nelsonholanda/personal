@@ -40,7 +40,9 @@ chmod +x deploy-ec2-rds.sh
 
 - **Frontend:** http://localhost:3000
 - **Backend API:** http://localhost:3001
-- **Health Check:** http://localhost/health
+- **Health Check:** http://localhost:3001/health
+
+> **Nota:** As aplicações são expostas diretamente nas portas 3000 e 3001. Para produção, recomenda-se usar um load balancer na frente.
 
 ## 📁 Estrutura do Projeto
 
@@ -60,7 +62,6 @@ projeto-personal/
 │   │   ├── pages/           # Páginas da aplicação
 │   │   └── contexts/        # Contextos React
 │   └── Dockerfile           # Container do frontend
-├── nginx/                   # Configuração do Nginx
 ├── docker-compose.yml       # Orquestração dos containers
 ├── deploy-ec2-rds.sh        # Script de deploy
 └── RDS_DEPLOY_README.md     # Documentação detalhada
@@ -85,6 +86,11 @@ npm start
 ### Testar Build
 ```bash
 ./test-backend-build.sh
+```
+
+### Testar Deploy Sem Nginx
+```bash
+./test-deploy-no-nginx.sh
 ```
 
 ## 📊 Funcionalidades
@@ -134,6 +140,7 @@ Para problemas:
 2. Teste a conectividade com RDS
 3. Verifique as variáveis de ambiente
 4. Execute o script de teste: `./test-backend-build.sh`
+5. Teste o deploy sem nginx: `./test-deploy-no-nginx.sh`
 
 ## 🧹 Limpeza
 

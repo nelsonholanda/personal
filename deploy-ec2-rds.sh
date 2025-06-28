@@ -76,30 +76,27 @@ docker-compose logs backend
 echo "📋 Logs do frontend:"
 docker-compose logs frontend
 
-echo "📋 Logs do nginx:"
-docker-compose logs nginx
-
 # Testar health check
 echo "🏥 Testando health check..."
 sleep 10
 
-if curl -f http://localhost/health > /dev/null 2>&1; then
+if curl -f http://localhost:3001/health > /dev/null 2>&1; then
     echo "✅ Health check passou!"
 else
     echo "⚠️ Health check falhou, mas os serviços podem estar ainda inicializando"
 fi
 
 echo "🎉 Deploy concluído!"
-echo "📱 Aplicação disponível em: http://localhost"
-echo "🔗 Health check: http://localhost/health"
-echo "📚 API: http://localhost/api"
+echo "📱 Aplicação disponível em:"
+echo "   • Frontend: http://localhost:3000"
+echo "   • Backend API: http://localhost:3001"
+echo "   • Health Check: http://localhost:3001/health"
 
 # Mostrar informações finais
 echo ""
 echo "📋 Informações do Deploy:"
 echo "   - Backend: http://localhost:3001"
 echo "   - Frontend: http://localhost:3000"
-echo "   - Nginx: http://localhost"
 echo "   - RDS: $RDS_HOST"
 echo ""
 echo "🔍 Para ver logs em tempo real:"
