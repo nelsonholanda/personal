@@ -9,10 +9,28 @@ Sistema completo de gerenciamento para personal trainers, incluindo controle de 
 - Acesso ao Amazon RDS MySQL
 - Configuração do AWS Secrets Manager (opcional)
 
-### 1. Configurar Variáveis de Ambiente
+### 1. Deploy Automático (Recomendado)
 
 ```bash
-cp env.example .env
+# Executar deploy simplificado
+./deploy-simple.sh
+```
+
+Este script irá:
+- Criar arquivo `.env` se não existir
+- Verificar configurações
+- Limpar containers órfãos
+- Construir e iniciar os serviços
+
+### 2. Deploy Manual
+
+#### Configurar Variáveis de Ambiente
+
+```bash
+# Criar arquivo .env
+./create-env.sh
+
+# Editar configurações
 nano .env
 ```
 
@@ -29,10 +47,13 @@ RDS_PASSWORD=your-password
 RDS_DATABASE=personal_trainer_db
 ```
 
-### 2. Executar Deploy
+#### Executar Deploy
 
 ```bash
-chmod +x deploy-ec2-rds.sh
+# Limpar ambiente e configurar
+./setup-env.sh
+
+# Fazer deploy
 ./deploy-ec2-rds.sh
 ```
 
@@ -43,6 +64,44 @@ chmod +x deploy-ec2-rds.sh
 - **Health Check:** http://localhost:3001/health
 
 > **Nota:** As aplicações são expostas diretamente nas portas 3000 e 3001. Para produção, recomenda-se usar um load balancer na frente.
+
+## 🔧 Solução de Problemas
+
+### Containers Reiniciando
+
+Se os containers estiverem reiniciando constantemente:
+
+```bash
+# Verificar logs
+docker-compose logs
+
+# Limpar containers órfãos
+docker-compose down --remove-orphans
+docker rm -f personal_trainer_mysql
+
+# Reconfigurar ambiente
+./setup-env.sh
+```
+
+### Variáveis de Ambiente Não Configuradas
+
+Se aparecer warnings sobre variáveis não configuradas:
+
+```bash
+# Criar e configurar .env
+./create-env.sh
+nano .env
+
+# Verificar configurações
+./setup-env.sh
+```
+
+### Testar Deploy
+
+```bash
+# Testar deploy sem nginx
+./test-deploy-no-nginx.sh
+```
 
 ## 📁 Estrutura do Projeto
 
@@ -63,7 +122,9 @@ projeto-personal/
 │   │   └── contexts/        # Contextos React
 │   └── Dockerfile           # Container do frontend
 ├── docker-compose.yml       # Orquestração dos containers
-├── deploy-ec2-rds.sh        # Script de deploy
+├── deploy-simple.sh         # Script de deploy simplificado
+├── create-env.sh            # Criar arquivo .env
+├── setup-env.sh             # Configurar ambiente
 └── RDS_DEPLOY_README.md     # Documentação detalhada
 ```
 
@@ -88,12 +149,7 @@ npm start
 ./test-backend-build.sh
 ```
 
-### Testar Deploy Sem Nginx
-```bash
-./test-deploy-no-nginx.sh
-```
-
-## 📊 Funcionalidades
+## �� Funcionalidades
 
 - **Autenticação:** Login/registro de usuários
 - **Gestão de Clientes:** Cadastro e controle de clientes
@@ -125,6 +181,9 @@ docker-compose down
 
 # Reiniciar backend
 docker-compose restart backend
+
+# Limpar containers órfãos
+docker-compose down --remove-orphans
 ```
 
 ## 📚 Documentação
@@ -136,11 +195,11 @@ docker-compose restart backend
 
 Para problemas:
 
-1. Verifique os logs: `docker-compose logs`
-2. Teste a conectividade com RDS
-3. Verifique as variáveis de ambiente
-4. Execute o script de teste: `./test-backend-build.sh`
-5. Teste o deploy sem nginx: `./test-deploy-no-nginx.sh`
+1. Execute o deploy simplificado: `./deploy-simple.sh`
+2. Verifique os logs: `docker-compose logs`
+3. Teste a conectividade com RDS
+4. Verifique as variáveis de ambiente: `./setup-env.sh`
+5. Execute o script de teste: `./test-backend-build.sh`
 
 ## 🧹 Limpeza
 
