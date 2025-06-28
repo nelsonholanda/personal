@@ -1,0 +1,13 @@
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f7f7f7;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-container {
+  padding: 2rem;
+} 

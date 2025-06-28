@@ -96,7 +96,7 @@ export const authController = {
       });
     } catch (error) {
       console.error('Register error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: 'Server error'
       });
@@ -151,7 +151,7 @@ export const authController = {
       // Remove password from response
       const { passwordHash, ...userWithoutPassword } = user;
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           user: userWithoutPassword,
@@ -160,7 +160,7 @@ export const authController = {
       });
     } catch (error) {
       console.error('Login error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: 'Server error'
       });
@@ -188,13 +188,13 @@ export const authController = {
       // Remove password from response
       const { passwordHash, ...userWithoutPassword } = user;
 
-      res.json({
+      return res.json({
         success: true,
         data: userWithoutPassword
       });
     } catch (error) {
       console.error('Get me error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: 'Server error'
       });
@@ -203,7 +203,7 @@ export const authController = {
 
   // Logout (client-side token removal)
   logout: async (req: Request, res: Response) => {
-    res.json({
+    return res.json({
       success: true,
       message: 'Logged out successfully'
     });
@@ -247,7 +247,7 @@ export const authController = {
         { expiresIn: '24h' }
       );
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           token: newToken
@@ -255,7 +255,7 @@ export const authController = {
       });
     } catch (error) {
       console.error('Refresh token error:', error);
-      res.status(401).json({
+      return res.status(401).json({
         success: false,
         error: 'Invalid token'
       });

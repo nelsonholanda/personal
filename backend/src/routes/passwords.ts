@@ -1,6 +1,6 @@
 import express from 'express';
 import { passwordController } from '../controllers/passwordController';
-import { authenticateToken } from '../middleware/auth';
+import { authMiddleware } from '../middleware/auth';
 import { adminOnly } from '../middleware/adminAuth';
 
 const router = express.Router();
@@ -10,7 +10,7 @@ router.post('/request-reset', passwordController.requestPasswordReset);
 router.post('/reset', passwordController.resetPassword);
 
 // Rotas que requerem autenticação
-router.use(authenticateToken);
+router.use(authMiddleware);
 
 // Alterar própria senha
 router.post('/change', passwordController.changePassword);
