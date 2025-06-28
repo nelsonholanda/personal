@@ -1,18 +1,20 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import databaseService from '../services/databaseService';
 
-const prisma = new PrismaClient();
+const prisma = databaseService.getPrismaClient();
 
 interface RegisterRequest {
   name: string;
   email: string;
   password: string;
-  role: 'trainer' | 'client';
+  role: 'trainer' | 'client' | 'admin';
   phone?: string;
   birthDate?: string;
   gender?: 'male' | 'female' | 'other';
+  height?: number;
+  weight?: number;
 }
 
 interface LoginRequest {
@@ -24,7 +26,7 @@ export const authController = {
   // Register new user
   register: async (req: Request, res: Response) => {
     try {
-      const { name, email, password, role, phone, birthDate, gender }: RegisterRequest = req.body;
+      const { name, email, password, role, phone, birthDate, gender, height, weight }: RegisterRequest = req.body;
 
       // Check if user already exists
       const existingUser = await prisma.user.findUnique({
@@ -34,12 +36,12 @@ export const authController = {
       if (existingUser) {
         return res.status(400).json({
           success: false,
-          error: 'User already exists with this email'
+          error: 'Usuário já existe com este email'
         });
       }
 
       // Hash password
-      const salt = await bcrypt.genSalt(10);
+      const salt = await bcrypt.genSalt(12);
       const passwordHash = await bcrypt.hash(password, salt);
 
       // Create user
@@ -51,7 +53,11 @@ export const authController = {
           role,
           phone,
           birthDate: birthDate ? new Date(birthDate) : null,
-          gender
+          gender,
+          height: height ? parseFloat(height.toString()) : null,
+          weight: weight ? parseFloat(weight.toString()) : null,
+          isActive: true,
+          passwordChangedAt: new Date()
         },
         select: {
           id: true,
@@ -61,6 +67,9 @@ export const authController = {
           phone: true,
           birthDate: true,
           gender: true,
+          height: true,
+          weight: true,
+          isActive: true,
           createdAt: true
         }
       });
@@ -69,13 +78,18 @@ export const authController = {
       if (role === 'trainer') {
         await prisma.trainerProfile.create({
           data: {
-            userId: user.id
+            userId: user.id,
+            specialization: '',
+            experienceYears: 0,
+            hourlyRate: 0
           }
         });
       } else if (role === 'client') {
         await prisma.clientProfile.create({
           data: {
-            userId: user.id
+            userId: user.id,
+            fitnessGoals: '',
+            medicalConditions: ''
           }
         });
       }
@@ -83,7 +97,7 @@ export const authController = {
       // Generate JWT token
       const token = jwt.sign(
         { userId: user.id, email: user.email, role: user.role },
-        process.env.JWT_SECRET!,
+        process.env.JWT_ACCESS_TOKEN_SECRET || 'nh-personal-access-token-secret-2024',
         { expiresIn: '24h' }
       );
 
@@ -98,7 +112,7 @@ export const authController = {
       console.error('Register error:', error);
       return res.status(500).json({
         success: false,
-        error: 'Server error'
+        error: 'Erro interno do servidor'
       });
     }
   },
@@ -120,7 +134,7 @@ export const authController = {
       if (!user) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid credentials'
+          error: 'Credenciais inválidas'
         });
       }
 
@@ -128,7 +142,7 @@ export const authController = {
       if (!user.isActive) {
         return res.status(400).json({
           success: false,
-          error: 'Account is deactivated'
+          error: 'Conta desativada'
         });
       }
 
@@ -137,14 +151,14 @@ export const authController = {
       if (!isPasswordValid) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid credentials'
+          error: 'Credenciais inválidas'
         });
       }
 
       // Generate JWT token
       const token = jwt.sign(
         { userId: user.id, email: user.email, role: user.role },
-        process.env.JWT_SECRET!,
+        process.env.JWT_ACCESS_TOKEN_SECRET || 'nh-personal-access-token-secret-2024',
         { expiresIn: '24h' }
       );
 
@@ -162,7 +176,7 @@ export const authController = {
       console.error('Login error:', error);
       return res.status(500).json({
         success: false,
-        error: 'Server error'
+        error: 'Erro interno do servidor'
       });
     }
   },
@@ -181,7 +195,7 @@ export const authController = {
       if (!user) {
         return res.status(404).json({
           success: false,
-          error: 'User not found'
+          error: 'Usuário não encontrado'
         });
       }
 
@@ -196,7 +210,60 @@ export const authController = {
       console.error('Get me error:', error);
       return res.status(500).json({
         success: false,
-        error: 'Server error'
+        error: 'Erro interno do servidor'
+      });
+    }
+  },
+
+  // Change password
+  changePassword: async (req: Request, res: Response) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      const userId = req.user!.id;
+
+      // Get user with password
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: 'Usuário não encontrado'
+        });
+      }
+
+      // Verify current password
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({
+          success: false,
+          error: 'Senha atual incorreta'
+        });
+      }
+
+      // Hash new password
+      const salt = await bcrypt.genSalt(12);
+      const newPasswordHash = await bcrypt.hash(newPassword, salt);
+
+      // Update password
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          passwordHash: newPasswordHash,
+          passwordChangedAt: new Date()
+        }
+      });
+
+      return res.json({
+        success: true,
+        message: 'Senha alterada com sucesso'
+      });
+    } catch (error) {
+      console.error('Change password error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Erro interno do servidor'
       });
     }
   },
@@ -205,60 +272,7 @@ export const authController = {
   logout: async (req: Request, res: Response) => {
     return res.json({
       success: true,
-      message: 'Logged out successfully'
+      message: 'Logout realizado com sucesso'
     });
-  },
-
-  // Refresh token
-  refreshToken: async (req: Request, res: Response) => {
-    try {
-      const token = req.header('Authorization')?.replace('Bearer ', '');
-
-      if (!token) {
-        return res.status(401).json({
-          success: false,
-          error: 'No token provided'
-        });
-      }
-
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-      
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.userId },
-        select: {
-          id: true,
-          email: true,
-          role: true,
-          isActive: true
-        }
-      });
-
-      if (!user || !user.isActive) {
-        return res.status(401).json({
-          success: false,
-          error: 'Invalid token'
-        });
-      }
-
-      // Generate new token
-      const newToken = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
-        process.env.JWT_SECRET!,
-        { expiresIn: '24h' }
-      );
-
-      return res.json({
-        success: true,
-        data: {
-          token: newToken
-        }
-      });
-    } catch (error) {
-      console.error('Refresh token error:', error);
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid token'
-      });
-    }
   }
 }; 

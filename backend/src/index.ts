@@ -6,7 +6,6 @@ import morgan from 'morgan';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -29,14 +28,13 @@ import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
 import { authMiddleware } from './middleware/auth';
 
-// Import AWS Secrets Manager
-import awsSecretsManager from './services/awsSecretsManager';
+// Import Database Service
+import databaseService from './services/databaseService';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 
 // Security middleware
@@ -115,38 +113,36 @@ app.use(errorHandler);
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('🛑 SIGTERM recebido, encerrando servidor...');
-  await prisma.$disconnect();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('🛑 SIGINT recebido, encerrando servidor...');
-  await prisma.$disconnect();
   process.exit(0);
 });
 
 // Start server
 const startServer = async () => {
   try {
-    // Test database connection
-    await prisma.$connect();
-    console.log('✅ Database connected successfully');
+    // Configurar URL do banco de dados
+    const databaseURL = databaseService.getDatabaseURL();
+    process.env.DATABASE_URL = databaseURL;
+    
+    console.log('🔐 Configuração do banco de dados carregada');
+    console.log(`📍 Host: ${databaseService.getDatabaseConfig().host}`);
+    console.log(`👤 Usuário: ${databaseService.getDatabaseConfig().username}`);
+    console.log(`🗄️ Database: ${databaseService.getDatabaseConfig().database}`);
 
-    // Configura a URL do banco de dados usando AWS Secrets Manager se disponível
-    if (awsSecretsManager.isConfigured()) {
-      console.log('🔐 Usando AWS Secrets Manager para configurações');
-      
-      try {
-        const databaseURL = await awsSecretsManager.getDatabaseURL();
-        process.env.DATABASE_URL = databaseURL;
-        console.log('✅ Configuração do banco de dados carregada do AWS Secrets Manager');
-      } catch (error) {
-        console.warn('⚠️ Erro ao carregar configurações do AWS Secrets Manager, usando configurações locais');
-        process.env.DATABASE_URL = awsSecretsManager.getLocalDatabaseURL();
-      }
-    } else {
-      console.log('🔧 Usando configurações locais');
-      process.env.DATABASE_URL = awsSecretsManager.getLocalDatabaseURL();
+    // Testar conexão com o banco
+    const connectionTest = await databaseService.testConnection();
+    if (!connectionTest) {
+      throw new Error('Falha na conexão com o banco de dados');
+    }
+
+    // Executar migrações se necessário
+    if (process.env.NODE_ENV === 'production') {
+      console.log('🔄 Executando migrações do banco de dados...');
+      await databaseService.runMigrations();
     }
 
     app.listen(PORT, () => {

@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import databaseService from '../services/databaseService';
 
-const prisma = new PrismaClient();
+const prisma = databaseService.getPrismaClient();
 
 interface JwtPayload {
   userId: number;
@@ -33,11 +33,14 @@ export const authMiddleware = async (
     if (!token) {
       return res.status(401).json({
         success: false,
-        error: 'Access denied. No token provided.'
+        error: 'Acesso negado. Token não fornecido.'
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+    const decoded = jwt.verify(
+      token, 
+      process.env.JWT_ACCESS_TOKEN_SECRET || 'nh-personal-access-token-secret-2024'
+    ) as JwtPayload;
     
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
@@ -52,16 +55,17 @@ export const authMiddleware = async (
     if (!user || !user.isActive) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid token or user inactive.'
+        error: 'Token inválido ou usuário inativo.'
       });
     }
 
     req.user = user;
     next();
   } catch (error) {
+    console.error('Auth middleware error:', error);
     return res.status(401).json({
       success: false,
-      error: 'Invalid token.'
+      error: 'Token inválido.'
     });
   }
 };
@@ -71,17 +75,21 @@ export const requireRole = (roles: string[]) => {
     if (!req.user) {
       return res.status(401).json({
         success: false,
-        error: 'Access denied. No token provided.'
+        error: 'Acesso negado. Token não fornecido.'
       });
     }
 
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        error: 'Access denied. Insufficient permissions.'
+        error: 'Acesso negado. Permissões insuficientes.'
       });
     }
 
     next();
   };
-}; 
+};
+
+export const requireAdmin = requireRole(['admin']);
+export const requireTrainer = requireRole(['trainer', 'admin']);
+export const requireClient = requireRole(['client', 'admin']); 

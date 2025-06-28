@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from 'react-query';
 import axios from 'axios';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface PasswordChangeForm {
   currentPassword: string;
@@ -42,6 +43,8 @@ const PasswordManagement: React.FC = () => {
   const [generatedPassword, setGeneratedPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [pendingForceUserId, setPendingForceUserId] = useState<number | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -240,9 +243,21 @@ const PasswordManagement: React.FC = () => {
 
   // Forçar mudança de senha
   const handleForcePasswordChange = (userId: number) => {
-    if (confirm('Tem certeza que deseja forçar a mudança de senha para este usuário?')) {
-      forcePasswordChangeMutation.mutate(userId);
+    setPendingForceUserId(userId);
+    setConfirmModalOpen(true);
+  };
+
+  const handleConfirmForcePasswordChange = () => {
+    if (pendingForceUserId !== null) {
+      forcePasswordChangeMutation.mutate(pendingForceUserId);
     }
+    setConfirmModalOpen(false);
+    setPendingForceUserId(null);
+  };
+
+  const handleCancelForcePasswordChange = () => {
+    setConfirmModalOpen(false);
+    setPendingForceUserId(null);
   };
 
   // Limpar mensagem após 5 segundos
@@ -399,10 +414,10 @@ const PasswordManagement: React.FC = () => {
                   
                   <button
                     type="submit"
-                    disabled={changePasswordMutation.isPending}
+                    disabled={changePasswordMutation.isLoading}
                     className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
                   >
-                    {changePasswordMutation.isPending ? 'Alterando...' : 'Alterar Senha'}
+                    {changePasswordMutation.isLoading ? 'Alterando...' : 'Alterar Senha'}
                   </button>
                 </div>
               </form>
@@ -450,10 +465,10 @@ const PasswordManagement: React.FC = () => {
 
                 <button
                   type="submit"
-                  disabled={requestResetMutation.isPending}
+                  disabled={requestResetMutation.isLoading}
                   className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {requestResetMutation.isPending ? 'Enviando...' : 'Solicitar Reset'}
+                  {requestResetMutation.isLoading ? 'Enviando...' : 'Solicitar Reset'}
                 </button>
               </form>
             </div>
@@ -530,10 +545,10 @@ const PasswordManagement: React.FC = () => {
                   
                   <button
                     type="submit"
-                    disabled={changeUserPasswordMutation.isPending}
+                    disabled={changeUserPasswordMutation.isLoading}
                     className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
                   >
-                    {changeUserPasswordMutation.isPending ? 'Alterando...' : 'Alterar Senha do Usuário'}
+                    {changeUserPasswordMutation.isLoading ? 'Alterando...' : 'Alterar Senha do Usuário'}
                   </button>
                 </div>
               </form>
@@ -580,7 +595,7 @@ const PasswordManagement: React.FC = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <button
                               onClick={() => handleForcePasswordChange(user.id)}
-                              disabled={forcePasswordChangeMutation.isPending}
+                              disabled={forcePasswordChangeMutation.isLoading}
                               className="text-red-600 hover:text-red-900 disabled:opacity-50"
                             >
                               Forçar mudança
@@ -648,6 +663,13 @@ const PasswordManagement: React.FC = () => {
             </div>
           )}
         </div>
+
+        <ConfirmModal
+          open={confirmModalOpen}
+          message="Tem certeza que deseja forçar a mudança de senha para este usuário?"
+          onConfirm={handleConfirmForcePasswordChange}
+          onCancel={handleCancelForcePasswordChange}
+        />
       </div>
     </div>
   );

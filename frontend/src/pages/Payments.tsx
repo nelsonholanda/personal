@@ -176,7 +176,7 @@ const Payments: React.FC = () => {
 
   // Handle mark as paid
   const handleMarkAsPaid = (payment: Payment) => {
-    const paymentDate = prompt('Data do pagamento (DD/MM/AAAA):', formatDate(new Date()));
+    const paymentDate = prompt('Data do pagamento (DD/MM/AAAA):', new Date().toLocaleDateString('pt-BR'));
     const paymentReference = prompt('Referência do pagamento (opcional):');
     
     if (paymentDate) {
@@ -186,7 +186,7 @@ const Payments: React.FC = () => {
       markAsPaidMutation.mutate({
         paymentId: payment.id,
         paymentDate: formattedDate,
-        paymentReference
+        paymentReference: paymentReference || undefined
       });
     }
   };

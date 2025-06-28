@@ -16,33 +16,12 @@ const Sidebar: React.FC = () => {
   const location = useLocation();
 
   const menuItems = [
-    {
-      name: 'Gestão de Clientes',
-      path: '/client-management',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-        </svg>
-      )
-    },
-    {
-      name: 'Pagamentos',
-      path: '/payments',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-        </svg>
-      )
-    },
-    {
-      name: 'Gerenciamento de Senhas',
-      path: '/password-management',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-        </svg>
-      )
-    }
+    { path: '/dashboard', label: 'Dashboard', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z' },
+    { path: '/clients', label: 'Clientes', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z' },
+    { path: '/training-plans', label: 'Planos de Treino', icon: 'M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+    { path: '/payments', label: 'Pagamentos', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1' },
+    { path: '/password-management', label: 'Gerenciar Usuários', icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z' },
+    { path: '/profile', label: 'Perfil', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
   ];
 
   const handleLogout = () => {
@@ -50,38 +29,50 @@ const Sidebar: React.FC = () => {
   };
 
   return (
-    <div className="w-64 bg-white shadow-lg min-h-screen">
-      <div className="p-6">
-        <h1 className="text-2xl font-bold text-primary-600">NH-Personal</h1>
+    <div className="bg-primary-900 text-white w-64 min-h-screen p-4">
+      <div className="mb-8">
+        <h2 className="text-xl font-bold text-white">
+          <span className="text-secondary-400">Fit</span>Manager
+        </h2>
       </div>
-      
-      <nav className="mt-6">
-        <div className="px-4 space-y-2">
-          {menuItems.map((item) => (
+
+      <nav className="space-y-2">
+        {menuItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                location.pathname === item.path
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
+                isActive
+                  ? 'bg-secondary-500 text-white shadow-lg'
+                  : 'text-gray-300 hover:bg-primary-800 hover:text-white'
               }`}
             >
-              <span className="mr-3">{item.icon}</span>
-              {item.name}
+              <svg
+                className="w-5 h-5 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+              </svg>
+              {item.label}
             </Link>
-          ))}
-        </div>
+          );
+        })}
       </nav>
 
-      <div className="absolute bottom-0 w-64 p-4">
-        <button
-          onClick={handleLogout}
-          className="group flex items-center w-full px-3 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors"
-        >
-          <LogOut className="mr-3 h-5 w-5" />
-          Sair
-        </button>
+      {/* Footer */}
+      <div className="absolute bottom-4 left-4 right-4">
+        <div className="bg-primary-800 rounded-lg p-4">
+          <p className="text-xs text-gray-400 text-center">
+            © 2024 FitManager
+          </p>
+          <p className="text-xs text-gray-500 text-center mt-1">
+            Sistema de Gestão para Personal Trainers
+          </p>
+        </div>
       </div>
     </div>
   );
