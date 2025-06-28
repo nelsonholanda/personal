@@ -280,8 +280,10 @@ NODE_ENV=production
 PORT=3001
 FRONTEND_URL=http://localhost:3000
 
-# Database Configuration (RDS AWS)
-DATABASE_URL=mysql://root:rootpassword@personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com:3306/personal_trainer_db
+# Database Configuration (RDS AWS) - Usando AWS Secrets Manager
+# DATABASE_URL será configurado dinamicamente pelo backend usando AWS Secrets Manager
+# Fallback para desenvolvimento local
+DATABASE_URL=mysql://root:password@localhost:3306/personal_trainer_db
 
 # AWS Configuration
 AWS_REGION=us-east-2
@@ -509,7 +511,34 @@ check_memory() {
 
 # Verificar conexão com RDS
 check_rds_connection() {
-    if mysql -h personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com -u root -prootpassword -e "SELECT 1;" >/dev/null 2>&1; then
+    # Obter credenciais do AWS Secrets Manager se disponível
+    local rds_host=""
+    local rds_user=""
+    local rds_password=""
+    
+    # Tentar obter do AWS Secrets Manager
+    if command -v /usr/local/bin/aws &> /dev/null; then
+        if /usr/local/bin/aws sts get-caller-identity &> /dev/null; then
+            local secret_json
+            if secret_json=$(/usr/local/bin/aws secretsmanager get-secret-value --secret-id "rds!db-da675fb5-6491-4bf4-981a-2fa9d6d5b811" --region "us-east-2" --query 'SecretString' --output text 2>/dev/null); then
+                rds_host=$(echo "$secret_json" | jq -r '.host // empty')
+                rds_user=$(echo "$secret_json" | jq -r '.username // empty')
+                rds_password=$(echo "$secret_json" | jq -r '.password // empty')
+            fi
+        fi
+    fi
+    
+    # Fallback para variáveis de ambiente
+    rds_host="${rds_host:-$RDS_HOST}"
+    rds_user="${rds_user:-$RDS_USER}"
+    rds_password="${rds_password:-$RDS_PASSWORD}"
+    
+    # Fallback final
+    rds_host="${rds_host:-localhost}"
+    rds_user="${rds_user:-root}"
+    rds_password="${rds_password:-password}"
+    
+    if mysql -h "$rds_host" -u "$rds_user" -p"$rds_password" -e "SELECT 1;" >/dev/null 2>&1; then
         echo "[$DATE] ✅ Conexão com RDS OK" >> $LOG_FILE
     else
         echo "[$DATE] ❌ Erro na conexão com RDS" >> $LOG_FILE
@@ -580,7 +609,34 @@ install_project_deps() {
 test_rds_connection() {
     log "Testando conexão com RDS..."
     
-    if mysql -h personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com -u root -prootpassword -e "SELECT 1;" >/dev/null 2>&1; then
+    # Obter credenciais do AWS Secrets Manager se disponível
+    local rds_host=""
+    local rds_user=""
+    local rds_password=""
+    
+    # Tentar obter do AWS Secrets Manager
+    if command -v /usr/local/bin/aws &> /dev/null; then
+        if /usr/local/bin/aws sts get-caller-identity &> /dev/null; then
+            local secret_json
+            if secret_json=$(/usr/local/bin/aws secretsmanager get-secret-value --secret-id "rds!db-da675fb5-6491-4bf4-981a-2fa9d6d5b811" --region "us-east-2" --query 'SecretString' --output text 2>/dev/null); then
+                rds_host=$(echo "$secret_json" | jq -r '.host // empty')
+                rds_user=$(echo "$secret_json" | jq -r '.username // empty')
+                rds_password=$(echo "$secret_json" | jq -r '.password // empty')
+            fi
+        fi
+    fi
+    
+    # Fallback para variáveis de ambiente
+    rds_host="${rds_host:-$RDS_HOST}"
+    rds_user="${rds_user:-$RDS_USER}"
+    rds_password="${rds_password:-$RDS_PASSWORD}"
+    
+    # Fallback final
+    rds_host="${rds_host:-localhost}"
+    rds_user="${rds_user:-root}"
+    rds_password="${rds_password:-password}"
+    
+    if mysql -h "$rds_host" -u "$rds_user" -p"$rds_password" -e "SELECT 1;" >/dev/null 2>&1; then
         log "✅ Conexão com RDS estabelecida com sucesso"
     else
         warn "⚠️ Não foi possível conectar ao RDS. Verifique as credenciais e configurações de rede."
@@ -605,7 +661,7 @@ show_final_info() {
     echo ""
     echo "🗄️ Banco de dados:"
     echo "   - Tipo: RDS AWS"
-    echo "   - Host: personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com"
+    echo "   - Configuração: AWS Secrets Manager"
     echo "   - Secret Name: rds!db-da675fb5-6491-4bf4-981a-2fa9d6d5b811"
     echo ""
     echo "🌐 URLs de acesso:"
@@ -630,7 +686,7 @@ show_final_info() {
     echo "   - Ver logs: journalctl -u nh-personal-backend -f"
     echo "   - Reiniciar serviços: systemctl restart nh-personal-backend nh-personal-frontend"
     echo "   - Monitoramento: /opt/nh-personal/monitor.sh"
-    echo "   - Testar RDS: mysql -h personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com -u root -p"
+    echo "   - Testar RDS: ./test-rds-connection.sh [SECRET_NAME]"
     echo ""
     echo "⚠️ Próximos passos:"
     echo "   1. Configure as variáveis AWS no arquivo .env"

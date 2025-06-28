@@ -7,10 +7,10 @@ services:
     container_name: personal_trainer_mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: personal_trainer_db
-      MYSQL_USER: app_user
-      MYSQL_PASSWORD: app_password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-personal_trainer_db}
+      MYSQL_USER: ${MYSQL_USER:-app_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
     ports:
       - "3306:3306"
     volumes:
@@ -30,9 +30,17 @@ services:
       - "3001:3001"
     environment:
       NODE_ENV: production
-      DATABASE_URL: mysql://app_user:app_password@mysql:3306/personal_trainer_db
+      # DATABASE_URL será configurado dinamicamente pelo backend usando AWS Secrets Manager
+      DATABASE_URL: mysql://root:password@localhost:3306/personal_trainer_db
       JWT_SECRET: your-super-secret-jwt-key-change-in-production
       PORT: 3001
+      # AWS Configuration
+      AWS_REGION: us-east-2
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      # AWS Secrets Manager Configuration
+      AWS_DATABASE_SECRET_NAME: ${AWS_DATABASE_SECRET_NAME:-rds!db-da675fb5-6491-4bf4-981a-2fa9d6d5b811}
+      AWS_JWT_SECRET_NAME: ${AWS_JWT_SECRET_NAME:-nh-personal/jwt}
     depends_on:
       - mysql
     volumes:

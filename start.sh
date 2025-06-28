@@ -19,8 +19,18 @@ fi
 if [ ! -f .env ]; then
     echo "📝 Criando arquivo .env..."
     cat > .env << EOF
-# Database Configuration
-DATABASE_URL=mysql://app_user:app_password@mysql:3306/personal_trainer_db
+# Database Configuration - Usando AWS Secrets Manager
+# DATABASE_URL será configurado dinamicamente pelo backend
+DATABASE_URL=mysql://root:password@localhost:3306/personal_trainer_db
+
+# AWS Configuration
+AWS_REGION=us-east-2
+AWS_ACCESS_KEY_ID=your_aws_access_key_id
+AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
+
+# AWS Secrets Manager Configuration
+AWS_DATABASE_SECRET_NAME=rds!db-da675fb5-6491-4bf4-981a-2fa9d6d5b811
+AWS_JWT_SECRET_NAME=nh-personal/jwt
 
 # JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key-change-in-production

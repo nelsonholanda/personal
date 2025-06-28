@@ -31,9 +31,17 @@ services:
       - "3001:3001"
     environment:
       NODE_ENV: production
+      # DATABASE_URL será configurado dinamicamente pelo backend usando AWS Secrets Manager
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
       PORT: 3001
+      # AWS Configuration
+      AWS_REGION: ${AWS_REGION:-us-east-2}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      # AWS Secrets Manager Configuration
+      AWS_DATABASE_SECRET_NAME: ${AWS_DATABASE_SECRET_NAME:-rds!db-da675fb5-6491-4bf4-981a-2fa9d6d5b811}
+      AWS_JWT_SECRET_NAME: ${AWS_JWT_SECRET_NAME:-nh-personal/jwt}
     depends_on:
       - mysql
     volumes:

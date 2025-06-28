@@ -122,8 +122,10 @@ NODE_ENV=production
 PORT=3001
 FRONTEND_URL=http://localhost:3000
 
-# Database Configuration (RDS AWS)
-DATABASE_URL=mysql://root:rootpassword@personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com:3306/personal_trainer_db
+# Database Configuration (RDS AWS) - Usando AWS Secrets Manager
+# DATABASE_URL será configurado dinamicamente pelo backend usando AWS Secrets Manager
+# Fallback para desenvolvimento local
+DATABASE_URL=mysql://root:password@localhost:3306/personal_trainer_db
 
 # AWS Configuration
 AWS_REGION=us-east-2
@@ -326,8 +328,35 @@ check_memory() {
 }
 
 check_rds_connection() {
+    # Obter credenciais do AWS Secrets Manager se disponível
+    local rds_host=""
+    local rds_user=""
+    local rds_password=""
+    
+    # Tentar obter do AWS Secrets Manager
+    if command -v /usr/local/bin/aws &> /dev/null; then
+        if /usr/local/bin/aws sts get-caller-identity &> /dev/null; then
+            local secret_json
+            if secret_json=$(/usr/local/bin/aws secretsmanager get-secret-value --secret-id "rds!db-da675fb5-6491-4bf4-981a-2fa9d6d5b811" --region "us-east-2" --query 'SecretString' --output text 2>/dev/null); then
+                rds_host=$(echo "$secret_json" | jq -r '.host // empty')
+                rds_user=$(echo "$secret_json" | jq -r '.username // empty')
+                rds_password=$(echo "$secret_json" | jq -r '.password // empty')
+            fi
+        fi
+    fi
+    
+    # Fallback para variáveis de ambiente
+    rds_host="${rds_host:-$RDS_HOST}"
+    rds_user="${rds_user:-$RDS_USER}"
+    rds_password="${rds_password:-$RDS_PASSWORD}"
+    
+    # Fallback final
+    rds_host="${rds_host:-localhost}"
+    rds_user="${rds_user:-root}"
+    rds_password="${rds_password:-password}"
+    
     # Testar conexão com RDS
-    if mysql -h personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com -u root -prootpassword -e "SELECT 1;" >/dev/null 2>&1; then
+    if mysql -h "$rds_host" -u "$rds_user" -p"$rds_password" -e "SELECT 1;" >/dev/null 2>&1; then
         echo "[$DATE] ✅ Conexão com RDS OK" >> $LOG_FILE
     else
         echo "[$DATE] ❌ Erro na conexão com RDS" >> $LOG_FILE
@@ -367,7 +396,7 @@ cat > /opt/nh-personal/INSTALACAO_INFO.txt << 'EOF'
 
 🗄️ Banco de dados:
    - Tipo: RDS AWS
-   - Host: personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com
+   - Configuração: AWS Secrets Manager
    - Secret Name: rds!db-da675fb5-6491-4bf4-981a-2fa9d6d5b811
 
 🌐 URLs de acesso:
@@ -392,14 +421,14 @@ cat > /opt/nh-personal/INSTALACAO_INFO.txt << 'EOF'
    - Ver logs: journalctl -u nh-personal-backend -f
    - Reiniciar serviços: systemctl restart nh-personal-backend nh-personal-frontend
    - Monitoramento: /opt/nh-personal/monitor.sh
-   - Testar RDS: mysql -h personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com -u root -p
+   - Testar RDS: mysql -h [HOST_DO_SECRET] -u [USER_DO_SECRET] -p
 
 ⚠️ Próximos passos:
    1. Configure as variáveis AWS no arquivo .env
    2. Copie os arquivos do projeto para /opt/nh-personal
    3. Execute: systemctl start nh-personal-backend nh-personal-frontend
    4. Configure SSL se necessário
-   5. Verifique a conexão com RDS
+   5. Verifique a conexão com RDS usando AWS Secrets Manager
 
 📞 Suporte: suporte@nhpersonal.com
 EOF
@@ -407,4 +436,4 @@ EOF
 echo "✅ Configuração da instância concluída!"
 echo "📋 Verifique /opt/nh-personal/INSTALACAO_INFO.txt para mais informações"
 echo "🌐 Acesse: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo 'localhost')"
-echo "🗄️ RDS configurado: personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com" 
+echo "🗄️ RDS configurado via AWS Secrets Manager" 

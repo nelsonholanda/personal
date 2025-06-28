@@ -30,12 +30,102 @@ info() {
     echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')] INFO: $1${NC}"
 }
 
-# Configurações do RDS
-RDS_HOST="personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com"
-RDS_PORT="3306"
-RDS_USER="root"
-RDS_PASSWORD="rootpassword"
-RDS_DATABASE="personal_trainer_db"
+# Configurações do AWS Secrets Manager
+SECRET_NAME="${1:-rds!db-da675fb5-6491-4bf4-981a-2fa9d6d5b811}"
+AWS_REGION="us-east-2"
+
+# Variáveis para armazenar credenciais do banco
+RDS_HOST=""
+RDS_PORT=""
+RDS_USER=""
+RDS_PASSWORD=""
+RDS_DATABASE=""
+
+# Função para obter credenciais do AWS Secrets Manager
+get_database_credentials() {
+    log "Obtendo credenciais do banco de dados..."
+    
+    # Definir caminho do AWS CLI
+    AWS_CLI="/usr/local/bin/aws"
+    
+    # Verificar se AWS CLI está instalado
+    if ! command -v "$AWS_CLI" &> /dev/null; then
+        warn "⚠️ AWS CLI não está instalado. Usando credenciais locais como fallback."
+        use_local_credentials
+        return
+    fi
+    
+    # Verificar se AWS está configurado
+    if ! "$AWS_CLI" sts get-caller-identity &> /dev/null; then
+        warn "⚠️ AWS CLI não está configurado. Usando credenciais locais como fallback."
+        use_local_credentials
+        return
+    fi
+    
+    # Obter secret do AWS Secrets Manager
+    local secret_json
+    if secret_json=$("$AWS_CLI" secretsmanager get-secret-value --secret-id "$SECRET_NAME" --region "$AWS_REGION" --query 'SecretString' --output text 2>/dev/null); then
+        log "✅ Secret obtido com sucesso do AWS Secrets Manager"
+        
+        # Extrair valores do JSON
+        RDS_HOST=$(echo "$secret_json" | jq -r '.host // empty')
+        RDS_PORT=$(echo "$secret_json" | jq -r '.port // 3306')
+        RDS_USER=$(echo "$secret_json" | jq -r '.username // empty')
+        RDS_PASSWORD=$(echo "$secret_json" | jq -r '.password // empty')
+        RDS_DATABASE=$(echo "$secret_json" | jq -r '.dbname // .database // empty')
+        
+        # Verificar se todos os campos necessários foram obtidos
+        if [[ -z "$RDS_HOST" || -z "$RDS_USER" || -z "$RDS_PASSWORD" || -z "$RDS_DATABASE" ]]; then
+            error "❌ Credenciais incompletas obtidas do secret"
+            error "Host: $RDS_HOST"
+            error "User: $RDS_USER"
+            error "Database: $RDS_DATABASE"
+            error "Password: [HIDDEN]"
+            warn "⚠️ Usando credenciais locais como fallback."
+            use_local_credentials
+            return
+        fi
+        
+        log "✅ Credenciais extraídas com sucesso"
+        info "Host: $RDS_HOST"
+        info "Port: $RDS_PORT"
+        info "User: $RDS_USER"
+        info "Database: $RDS_DATABASE"
+        
+    else
+        error "❌ Falha ao obter secret do AWS Secrets Manager"
+        error "Secret Name: $SECRET_NAME"
+        error "Region: $AWS_REGION"
+        warn "⚠️ Usando credenciais locais como fallback."
+        use_local_credentials
+    fi
+}
+
+# Função para usar credenciais locais como fallback
+use_local_credentials() {
+    log "Usando credenciais locais..."
+    
+    # Tentar obter credenciais de variáveis de ambiente
+    RDS_HOST="${RDS_HOST:-localhost}"
+    RDS_PORT="${RDS_PORT:-3306}"
+    RDS_USER="${RDS_USER:-root}"
+    RDS_PASSWORD="${RDS_PASSWORD:-password}"
+    RDS_DATABASE="${RDS_DATABASE:-personal_trainer_db}"
+    
+    # Verificar se as credenciais estão definidas
+    if [[ -z "$RDS_HOST" || -z "$RDS_USER" || -z "$RDS_PASSWORD" || -z "$RDS_DATABASE" ]]; then
+        error "❌ Credenciais locais incompletas"
+        error "Defina as seguintes variáveis de ambiente:"
+        error "  RDS_HOST, RDS_USER, RDS_PASSWORD, RDS_DATABASE"
+        exit 1
+    fi
+    
+    log "✅ Credenciais locais configuradas"
+    info "Host: $RDS_HOST"
+    info "Port: $RDS_PORT"
+    info "User: $RDS_USER"
+    info "Database: $RDS_DATABASE"
+}
 
 # Função para testar conexão com RDS
 test_rds_connection() {
@@ -223,6 +313,16 @@ main() {
     if ! command -v mysql &> /dev/null; then
         error "MySQL client não está instalado. Execute o script de instalação primeiro."
         exit 1
+    fi
+    
+    # Verificar se jq está instalado (opcional)
+    if ! command -v jq &> /dev/null; then
+        warn "⚠️ jq não está instalado. Instale para melhor parsing de JSON: sudo apt install jq"
+        warn "⚠️ Usando credenciais locais como fallback."
+        use_local_credentials
+    else
+        # Obter credenciais do AWS Secrets Manager
+        get_database_credentials
     fi
     
     # Testar conexão
