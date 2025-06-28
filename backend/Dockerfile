@@ -12,8 +12,14 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Generate Prisma client
+RUN npx prisma generate
+
 # Build the application
 RUN npm run build
+
+# Verify that the build was successful
+RUN ls -la dist/ && test -f dist/index.js
 
 # Remove devDependencies and keep only production dependencies
 RUN npm prune --production
