@@ -50,65 +50,74 @@ docker-compose down
 echo "🗑️  Removendo imagens antigas..."
 docker system prune -f
 
-# Construir e iniciar containers de produção
-echo "🔨 Construindo e iniciando containers de produção..."
-docker-compose -f docker-compose.prod.yml up --build -d
+# Iniciar os containers
+echo "🚀 Iniciando containers..."
+docker-compose up --build -d
 
-# Aguardar serviços ficarem prontos
-echo "⏳ Aguardando serviços ficarem prontos..."
-sleep 45
+# Aguardar um pouco para os serviços inicializarem
+echo "⏳ Aguardando inicialização dos serviços..."
+sleep 15
 
 # Verificar status dos containers
 echo "📊 Status dos containers:"
-docker-compose -f docker-compose.prod.yml ps
+docker-compose ps
 
-# Verificar health checks
-echo "🏥 Verificando health checks..."
-sleep 10
+# Verificar se todos os containers estão rodando
+echo "🔍 Verificando logs dos serviços..."
+
+# Verificar logs do MySQL
+echo "📋 Logs do MySQL:"
+docker-compose logs mysql --tail=3
+
+# Verificar logs do Backend
+echo "📋 Logs do Backend:"
+docker-compose logs backend --tail=3
+
+# Verificar logs do Frontend
+echo "📋 Logs do Frontend:"
+docker-compose logs frontend --tail=3
+
+# Verificar logs do Nginx
+echo "📋 Logs do Nginx:"
+docker-compose logs nginx --tail=3
 
 # Testar endpoints
-echo "🧪 Testando endpoints..."
-if curl -f http://localhost/health > /dev/null 2>&1; then
-    echo "✅ Health check: OK"
+echo "🏥 Testando endpoints..."
+
+# Testar health check do backend
+if curl -f http://localhost:3001/health > /dev/null 2>&1; then
+    echo "✅ Backend health check: OK"
 else
-    echo "❌ Health check: FAILED"
+    echo "❌ Backend health check: FALHOU"
 fi
 
-if curl -f http://localhost/api/auth/login > /dev/null 2>&1; then
-    echo "✅ API endpoint: OK"
+# Testar frontend
+if curl -f http://localhost:3000 > /dev/null 2>&1; then
+    echo "✅ Frontend: OK"
 else
-    echo "❌ API endpoint: FAILED"
+    echo "❌ Frontend: FALHOU"
 fi
 
-# Verificar logs
-echo "📋 Logs dos serviços:"
-echo "======================"
+# Testar nginx
+if curl -f http://localhost > /dev/null 2>&1; then
+    echo "✅ Nginx: OK"
+else
+    echo "❌ Nginx: FALHOU"
+fi
 
-echo "🐳 MySQL:"
-docker-compose -f docker-compose.prod.yml logs mysql --tail=3
-
-echo "🔧 Backend:"
-docker-compose -f docker-compose.prod.yml logs backend --tail=3
-
-echo "⚛️  Frontend:"
-docker-compose -f docker-compose.prod.yml logs frontend --tail=3
-
-echo "🌐 Nginx:"
-docker-compose -f docker-compose.prod.yml logs nginx --tail=3
-
-echo "=========================================================="
-echo "🎉 Deploy concluído com sucesso!"
 echo ""
-echo "📱 Aplicação disponível em:"
-echo "   • Frontend: http://localhost"
-echo "   • Backend API: http://localhost/api"
-echo "   • Health Check: http://localhost/health"
+echo "🎉 DEPLOY CONCLUÍDO!"
+echo ""
+echo "📱 URLs da aplicação:"
+echo "   • Frontend: http://localhost:3000"
+echo "   • Backend:  http://localhost:3001"
+echo "   • Nginx:    http://localhost"
 echo ""
 echo "🔧 Comandos úteis:"
-echo "   • Ver logs: docker-compose -f docker-compose.prod.yml logs -f"
-echo "   • Parar: docker-compose -f docker-compose.prod.yml down"
-echo "   • Reiniciar: docker-compose -f docker-compose.prod.yml restart"
-echo "   • Status: docker-compose -f docker-compose.prod.yml ps"
+echo "   • Ver logs: docker-compose logs -f"
+echo "   • Parar: docker-compose down"
+echo "   • Reiniciar: docker-compose restart"
+echo "   • Status: docker-compose ps"
 echo ""
 echo "📚 Para mais informações, consulte o README.md"
 echo "==========================================================" 

@@ -3,8 +3,6 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import databaseService from '../services/databaseService';
 
-const prisma = databaseService.getPrismaClient();
-
 interface RegisterRequest {
   name: string;
   email: string;
@@ -23,12 +21,14 @@ interface LoginRequest {
 }
 
 export const authController = {
-  // Register new user
+  // Registrar usuário
   register: async (req: Request, res: Response) => {
     try {
       const { name, email, password, role, phone, birthDate, gender, height, weight }: RegisterRequest = req.body;
 
-      // Check if user already exists
+      const prisma = await databaseService.getPrismaClient();
+
+      // Verificar se o usuário já existe
       const existingUser = await prisma.user.findUnique({
         where: { email }
       });
@@ -36,15 +36,15 @@ export const authController = {
       if (existingUser) {
         return res.status(400).json({
           success: false,
-          error: 'Usuário já existe com este email'
+          error: 'Usuário já existe'
         });
       }
 
-      // Hash password
-      const salt = await bcrypt.genSalt(12);
-      const passwordHash = await bcrypt.hash(password, salt);
+      // Hash da senha
+      const saltRounds = 12;
+      const passwordHash = await bcrypt.hash(password, saltRounds);
 
-      // Create user
+      // Criar usuário
       const user = await prisma.user.create({
         data: {
           name,
@@ -52,13 +52,114 @@ export const authController = {
           passwordHash,
           role,
           phone,
-          birthDate: birthDate ? new Date(birthDate) : null,
+          birthDate: birthDate ? new Date(birthDate) : undefined,
           gender,
-          height: height ? parseFloat(height.toString()) : null,
-          weight: weight ? parseFloat(weight.toString()) : null,
-          isActive: true,
-          passwordChangedAt: new Date()
-        },
+          height: height ? parseFloat(height.toString()) : undefined,
+          weight: weight ? parseFloat(weight.toString()) : undefined
+        }
+      });
+
+      // Gerar token JWT
+      const token = jwt.sign(
+        { id: user.id, email: user.email, role: user.role },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '24h' }
+      );
+
+      res.status(201).json({
+        success: true,
+        data: {
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+          },
+          token
+        }
+      });
+    } catch (error) {
+      console.error('Register error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Server error'
+      });
+    }
+  },
+
+  // Login
+  login: async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body;
+
+      const prisma = await databaseService.getPrismaClient();
+
+      // Buscar usuário
+      const user = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Credenciais inválidas'
+        });
+      }
+
+      // Verificar senha
+      const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+      if (!isValidPassword) {
+        return res.status(401).json({
+          success: false,
+          error: 'Credenciais inválidas'
+        });
+      }
+
+      // Verificar se o usuário está ativo
+      if (!user.isActive) {
+        return res.status(401).json({
+          success: false,
+          error: 'Conta desativada'
+        });
+      }
+
+      // Gerar token JWT
+      const token = jwt.sign(
+        { id: user.id, email: user.email, role: user.role },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '24h' }
+      );
+
+      res.json({
+        success: true,
+        data: {
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+          },
+          token
+        }
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Server error'
+      });
+    }
+  },
+
+  // Obter perfil do usuário
+  getProfile: async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+
+      const prisma = await databaseService.getPrismaClient();
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
         select: {
           id: true,
           name: true,
@@ -69,114 +170,28 @@ export const authController = {
           gender: true,
           height: true,
           weight: true,
+          profileImageUrl: true,
           isActive: true,
           createdAt: true
         }
       });
 
-      // Create profile based on role
-      if (role === 'trainer') {
-        await prisma.trainerProfile.create({
-          data: {
-            userId: user.id,
-            specialization: '',
-            experienceYears: 0,
-            hourlyRate: 0
-          }
-        });
-      } else if (role === 'client') {
-        await prisma.clientProfile.create({
-          data: {
-            userId: user.id,
-            fitnessGoals: '',
-            medicalConditions: ''
-          }
-        });
-      }
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
-        process.env.JWT_ACCESS_TOKEN_SECRET || 'nh-personal-access-token-secret-2024',
-        { expiresIn: '24h' }
-      );
-
-      res.status(201).json({
-        success: true,
-        data: {
-          user,
-          token
-        }
-      });
-    } catch (error) {
-      console.error('Register error:', error);
-      return res.status(500).json({
-        success: false,
-        error: 'Erro interno do servidor'
-      });
-    }
-  },
-
-  // Login user
-  login: async (req: Request, res: Response) => {
-    try {
-      const { email, password }: LoginRequest = req.body;
-
-      // Find user
-      const user = await prisma.user.findUnique({
-        where: { email },
-        include: {
-          trainerProfile: true,
-          clientProfile: true
-        }
-      });
-
       if (!user) {
-        return res.status(400).json({
+        return res.status(404).json({
           success: false,
-          error: 'Credenciais inválidas'
+          error: 'Usuário não encontrado'
         });
       }
 
-      // Check if user is active
-      if (!user.isActive) {
-        return res.status(400).json({
-          success: false,
-          error: 'Conta desativada'
-        });
-      }
-
-      // Verify password
-      const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-      if (!isPasswordValid) {
-        return res.status(400).json({
-          success: false,
-          error: 'Credenciais inválidas'
-        });
-      }
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
-        process.env.JWT_ACCESS_TOKEN_SECRET || 'nh-personal-access-token-secret-2024',
-        { expiresIn: '24h' }
-      );
-
-      // Remove password from response
-      const { passwordHash, ...userWithoutPassword } = user;
-
-      return res.json({
+      res.json({
         success: true,
-        data: {
-          user: userWithoutPassword,
-          token
-        }
+        data: user
       });
     } catch (error) {
-      console.error('Login error:', error);
-      return res.status(500).json({
+      console.error('Get profile error:', error);
+      res.status(500).json({
         success: false,
-        error: 'Erro interno do servidor'
+        error: 'Server error'
       });
     }
   },
@@ -184,6 +199,8 @@ export const authController = {
   // Get current user
   getMe: async (req: Request, res: Response) => {
     try {
+      const prisma = await databaseService.getPrismaClient();
+      
       const user = await prisma.user.findUnique({
         where: { id: req.user!.id },
         include: {
@@ -220,6 +237,8 @@ export const authController = {
     try {
       const { currentPassword, newPassword } = req.body;
       const userId = req.user!.id;
+
+      const prisma = await databaseService.getPrismaClient();
 
       // Get user with password
       const user = await prisma.user.findUnique({
@@ -287,6 +306,8 @@ export const authController = {
           error: 'Refresh token é obrigatório'
         });
       }
+
+      const prisma = await databaseService.getPrismaClient();
 
       // Verificar o refresh token
       const decoded = jwt.verify(

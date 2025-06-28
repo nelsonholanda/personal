@@ -104,14 +104,15 @@ process.on('SIGINT', async () => {
 // Start server
 const startServer = async () => {
   try {
-    // Configurar URL do banco de dados
-    const databaseURL = databaseService.getDatabaseURL();
-    process.env.DATABASE_URL = databaseURL;
+    // Inicializar serviço de banco de dados
+    await databaseService.initialize();
     
+    // Obter configurações do banco
+    const dbConfig = await databaseService.getDatabaseConfig();
     console.log('🔐 Configuração do banco de dados carregada');
-    console.log(`📍 Host: ${databaseService.getDatabaseConfig().host}`);
-    console.log(`👤 Usuário: ${databaseService.getDatabaseConfig().username}`);
-    console.log(`🗄️ Database: ${databaseService.getDatabaseConfig().database}`);
+    console.log(`📍 Host: ${dbConfig.host}`);
+    console.log(`👤 Usuário: ${dbConfig.username}`);
+    console.log(`🗄️ Database: ${dbConfig.database}`);
 
     // Testar conexão com o banco
     const connectionTest = await databaseService.testConnection();

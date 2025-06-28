@@ -1,73 +1,45 @@
 version: '3.8'
 
 services:
-  # MySQL Database
-  mysql:
-    image: mysql:8.0
-    container_name: personal_trainer_mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-personal_trainer_db}
-      MYSQL_USER: ${MYSQL_USER:-app_user}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - personal_trainer_network
-
   # Backend API
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: personal-backend
     container_name: personal_trainer_backend
     restart: unless-stopped
     ports:
       - "3001:3001"
     environment:
-      NODE_ENV: production
-      # DATABASE_URL será configurado dinamicamente pelo backend usando AWS Secrets Manager
-      DATABASE_URL: mysql://root:password@localhost:3306/personal_trainer_db
-      JWT_SECRET: your-super-secret-jwt-key-change-in-production
-      PORT: 3001
-      # AWS Configuration
-      AWS_REGION: us-east-2
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      # AWS Secrets Manager Configuration
-      AWS_DATABASE_SECRET_NAME: ${AWS_DATABASE_SECRET_NAME:-rds!db-da675fb5-6491-4bf4-981a-2fa9d6d5b811}
-      AWS_JWT_SECRET_NAME: ${AWS_JWT_SECRET_NAME:-nh-personal/jwt}
-    depends_on:
-      - mysql
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
+      - NODE_ENV=production
+      - AWS_SECRET_NAME=${AWS_SECRET_NAME}
+      - AWS_REGION=${AWS_REGION:-us-east-2}
+      - RDS_HOST=${RDS_HOST}
+      - RDS_PORT=${RDS_PORT:-3306}
+      - RDS_USERNAME=${RDS_USERNAME}
+      - RDS_PASSWORD=${RDS_PASSWORD}
+      - RDS_DATABASE=${RDS_DATABASE}
     networks:
       - personal_trainer_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Frontend React App
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: personal-frontend
     container_name: personal_trainer_frontend
     restart: unless-stopped
     ports:
-      - "3000:3000"
-    environment:
-      REACT_APP_API_URL: http://localhost:3001
-      REACT_APP_ENV: production
+      - "3000:80"
     depends_on:
       - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     networks:
       - personal_trainer_network
+    environment:
+      - REACT_APP_API_URL=http://localhost:3001/api
+      - NODE_ENV=production
 
   # Nginx Reverse Proxy
   nginx:
@@ -78,16 +50,13 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf
       - ./nginx/ssl:/etc/nginx/ssl
     depends_on:
-      - frontend
       - backend
+      - frontend
     networks:
       - personal_trainer_network
-
-volumes:
-  mysql_data:
 
 networks:
   personal_trainer_network:

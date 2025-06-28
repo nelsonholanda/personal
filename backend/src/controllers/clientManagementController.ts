@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import databaseService from '../services/databaseService';
 
 interface CreateClientManagementRequest {
   clientId: number;
@@ -35,6 +33,8 @@ export const clientManagementController = {
     try {
       const trainerId = req.user!.id;
       const { status, page = 1, limit = 10 } = req.query;
+
+      const prisma = await databaseService.getPrismaClient();
 
       const where: any = { trainerId };
       if (status) {
@@ -133,6 +133,8 @@ export const clientManagementController = {
       const { id } = req.params;
       const trainerId = req.user!.id;
 
+      const prisma = await databaseService.getPrismaClient();
+
       const clientManagement = await prisma.clientManagement.findFirst({
         where: {
           id: Number(id),
@@ -192,6 +194,8 @@ export const clientManagementController = {
     try {
       const trainerId = req.user!.id;
       const { clientId, weeklySessions, sessionDurationMinutes, notes }: CreateClientManagementRequest = req.body;
+
+      const prisma = await databaseService.getPrismaClient();
 
       // Verificar se o cliente já existe para este trainer
       const existingClient = await prisma.clientManagement.findFirst({
@@ -265,6 +269,8 @@ export const clientManagementController = {
       const trainerId = req.user!.id;
       const updateData: UpdateClientManagementRequest = req.body;
 
+      const prisma = await databaseService.getPrismaClient();
+
       const clientManagement = await prisma.clientManagement.findFirst({
         where: {
           id: Number(id),
@@ -317,6 +323,8 @@ export const clientManagementController = {
       const { id } = req.params;
       const trainerId = req.user!.id;
 
+      const prisma = await databaseService.getPrismaClient();
+
       const clientManagement = await prisma.clientManagement.findFirst({
         where: {
           id: Number(id),
@@ -353,6 +361,8 @@ export const clientManagementController = {
     try {
       const trainerId = req.user!.id;
       const { startDate, endDate } = req.query;
+
+      const prisma = await databaseService.getPrismaClient();
 
       const where: any = {
         trainer: { id: trainerId }
