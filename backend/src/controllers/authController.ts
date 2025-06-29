@@ -16,7 +16,8 @@ interface RegisterRequest {
 }
 
 interface LoginRequest {
-  email: string;
+  email?: string;
+  name?: string;
   password: string;
 }
 
@@ -90,14 +91,26 @@ export const authController = {
   // Login
   login: async (req: Request, res: Response) => {
     try {
-      const { email, password } = req.body;
+      const { email, name, password } = req.body;
 
       const prisma = await databaseService.getPrismaClient();
 
-      // Buscar usuário
-      const user = await prisma.user.findUnique({
-        where: { email }
-      });
+      // Buscar usuário por email ou nome
+      let user;
+      if (email) {
+        user = await prisma.user.findUnique({
+          where: { email }
+        });
+      } else if (name) {
+        user = await prisma.user.findFirst({
+          where: { name }
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: 'Email ou nome de usuário é obrigatório'
+        });
+      }
 
       if (!user) {
         return res.status(401).json({

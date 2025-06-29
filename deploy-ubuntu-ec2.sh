@@ -207,6 +207,52 @@ EOF
     success "Variáveis de ambiente configuradas"
 }
 
+# Função para inicializar banco de dados e criar usuário admin
+initialize_database() {
+    log "🗄️ Inicializando banco de dados e criando usuário admin..."
+    
+    # Verificar se o banco está acessível
+    log "🔍 Verificando conectividade com o banco de dados..."
+    if ! mysql -h personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com -u admin -p'Rdms95gn!' -e "SELECT 1;" > /dev/null 2>&1; then
+        error "Não foi possível conectar ao banco de dados RDS. Verifique as credenciais e conectividade."
+    fi
+    
+    success "Conectividade com banco de dados: OK"
+    
+    # Instalar dependências do Node.js para executar os scripts
+    log "📦 Instalando dependências do Node.js..."
+    if [ ! -d "backend/node_modules" ]; then
+        cd backend
+        npm install
+        cd ..
+    fi
+    
+    # Executar migrações do Prisma
+    log "🔄 Executando migrações do banco de dados..."
+    cd backend
+    
+    # Configurar variáveis de ambiente para o Prisma
+    export DATABASE_URL="mysql://admin:Rdms95gn!@personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com:3306/personal_trainer_db"
+    
+    # Gerar cliente Prisma
+    npx prisma generate
+    
+    # Executar migrações
+    npx prisma migrate deploy
+    
+    success "Migrações executadas com sucesso"
+    
+    # Criar usuário administrador
+    log "👤 Criando usuário administrador 'nholanda'..."
+    node scripts/create-admin-user.js
+    
+    success "Usuário administrador criado com sucesso"
+    
+    cd ..
+    
+    log "✅ Inicialização do banco de dados concluída"
+}
+
 # Função para fazer deploy
 deploy_application() {
     log "🚀 Iniciando deploy da aplicação..."
@@ -215,6 +261,9 @@ deploy_application() {
     if [ ! -f "docker-compose.yml" ]; then
         error "Arquivo docker-compose.yml não encontrado. Execute este script no diretório raiz do projeto."
     fi
+    
+    # Inicializar banco de dados ANTES do deploy
+    initialize_database
     
     # Recarregar grupos do usuário
     log "🔄 Recarregando grupos do usuário..."
@@ -250,18 +299,6 @@ deploy_application() {
         fi
     done
     
-    # Executar migrações
-    log "🗄️ Executando migrações do banco..."
-    sudo docker-compose exec -T backend npx prisma migrate deploy
-    
-    success "Migrações executadas"
-    
-    # Criar usuário administrador
-    log "👤 Criando usuário administrador..."
-    sudo docker-compose exec -T backend node scripts/create-admin-user.js
-    
-    success "Usuário administrador criado"
-    
     # Configurar logs
     log "📝 Configurando logs..."
     sudo mkdir -p /var/log/nh-personal
@@ -285,11 +322,11 @@ show_deploy_info() {
     echo "   Health Check: http://$PUBLIC_IP:3001/health"
     echo ""
     echo "👤 Credenciais de Administrador:"
-    echo "   Email: nholanda@nhpersonal.com"
+    echo "   Usuário: nholanda"
     echo "   Senha: P10r1988!"
     echo ""
-    echo "⚠️  IMPORTANTE: Configure as credenciais de administrador após o deploy!"
-    echo "   Execute: sudo docker-compose exec backend node scripts/create-admin-user.js"
+    echo "✅ Banco de dados inicializado automaticamente"
+    echo "✅ Usuário admin criado automaticamente"
     echo ""
     echo "🔧 Comandos úteis:"
     echo "   Status: $0 status"
@@ -464,7 +501,7 @@ test_application_features() {
     log "🔐 Testando login de administrador..."
     LOGIN_RESPONSE=$(curl -s -X POST http://localhost:3001/api/auth/login \
         -H "Content-Type: application/json" \
-        -d '{"email":"nholanda@nhpersonal.com","password":"P10r1988!"}' 2>/dev/null || echo "FAILED")
+        -d '{"name":"nholanda","password":"P10r1988!"}' 2>/dev/null || echo "FAILED")
     
     if echo "$LOGIN_RESPONSE" | grep -q "token\|access_token"; then
         success "   ✅ Login administrador: OK"
