@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script Completo de Deploy para Ubuntu EC2 - NH Personal Trainer
+# Script Completo de Deploy para Ubuntu EC2 - NH Gestão de Alunos
 # Versão: 4.0.0 - Ubuntu Server
 
 set -e
@@ -32,7 +32,7 @@ warning() {
 
 # Função para mostrar ajuda
 show_help() {
-    echo "🚀 Script de Deploy para Ubuntu EC2 - NH Personal Trainer"
+    echo "🚀 Script de Deploy para Ubuntu EC2 - NH Gestão de Alunos"
     echo "========================================================"
     echo ""
     echo "Uso: $0 [OPÇÃO]"
@@ -449,7 +449,7 @@ test_application_features() {
     # 1. Testar página inicial (Home)
     log "📄 Testando página inicial..."
     HOME_RESPONSE=$(curl -s -f http://localhost:3000 2>/dev/null || echo "FAILED")
-    if echo "$HOME_RESPONSE" | grep -q "html\|React\|NH Personal"; then
+    if echo "$HOME_RESPONSE" | grep -q "html\|React\|NH Gestão"; then
         success "   ✅ Página inicial: OK"
         ((TESTS_PASSED++))
     else

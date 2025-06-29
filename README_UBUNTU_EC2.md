@@ -1,6 +1,6 @@
-# 🚀 Deploy NH Personal Trainer - Ubuntu EC2
+# 🚀 Deploy NH Gestão de Alunos - Ubuntu EC2
 
-Script único e completo para fazer deploy da aplicação NH Personal Trainer em uma instância Ubuntu EC2 da AWS.
+Script único e completo para fazer deploy da aplicação NH Gestão de Alunos em uma instância Ubuntu EC2 da AWS.
 
 ## 📋 Pré-requisitos
 

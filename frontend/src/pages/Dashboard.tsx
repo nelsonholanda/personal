@@ -4,27 +4,28 @@ import { apiService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-interface DashboardStats {
+// Import interfaces from API service
+type DashboardStats = {
   activeClients: number;
   monthlyRevenue: number;
   todaySessions: number;
   pendingPayments: number;
-}
+};
 
-interface RecentActivity {
+type RecentActivity = {
   id: number;
   type: string;
   description: string;
   timestamp: string;
-}
+};
 
-interface UpcomingSession {
+type UpcomingSession = {
   id: number;
   clientName: string;
   date: string;
   time: string;
   status: string;
-}
+};
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();

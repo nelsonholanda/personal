@@ -1,6 +1,6 @@
-# NH Personal Trainer
+# NH Gestão de Alunos
 
-Sistema completo de gerenciamento para personal trainers, incluindo controle de clientes, pagamentos e treinos.
+Sistema completo para gerenciamento de alunos e personal trainers, desenvolvido com tecnologias modernas e focado em usabilidade e eficiência.
 
 ## 🚀 Deploy Rápido
 
@@ -203,7 +203,7 @@ sudo netstat -tlnp | grep -E ':(80|443|3000|3001|3306)'
 
 ---
 
-**NH Personal Trainer** - Sistema completo para gerenciamento de personal trainers
+**NH Gestão de Alunos** - Sistema completo para gerenciamento de alunos e personal trainers
 
 ## Sobre
 

@@ -32,8 +32,13 @@ const Sidebar: React.FC = () => {
     <div className="bg-primary-900 text-white w-64 min-h-screen p-4">
       <div className="mb-8">
         <h2 className="text-xl font-bold text-white">
-          <span className="text-secondary-400">Fit</span>Manager
+          <span className="text-secondary-400">NH</span> Gestão de Alunos
         </h2>
+      </div>
+
+      <div className="text-center mb-6">
+        <h2 className="text-lg font-semibold text-white">NH Gestão de Alunos</h2>
+        <p className="text-xs text-gray-400">Sistema de Gestão de Alunos</p>
       </div>
 
       <nav className="space-y-2">
@@ -67,10 +72,10 @@ const Sidebar: React.FC = () => {
       <div className="absolute bottom-4 left-4 right-4">
         <div className="bg-primary-800 rounded-lg p-4">
           <p className="text-xs text-gray-400 text-center">
-            © 2024 FitManager
+            © 2024 NH Gestão de Alunos
           </p>
           <p className="text-xs text-gray-500 text-center mt-1">
-            Sistema de Gestão para Personal Trainers
+            Sistema de Gestão de Alunos
           </p>
         </div>
       </div>

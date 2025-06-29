@@ -1,4 +1,4 @@
-# 🚀 Deploy Simples - NH Personal Trainer
+# 🚀 Deploy Simples - NH Gestão de Alunos
 
 ## 📋 O que foi organizado
 

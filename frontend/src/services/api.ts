@@ -1,5 +1,40 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
+// TypeScript interfaces
+interface DashboardStats {
+  activeClients: number;
+  monthlyRevenue: number;
+  todaySessions: number;
+  pendingPayments: number;
+}
+
+interface RecentActivity {
+  id: number;
+  type: string;
+  description: string;
+  timestamp: string;
+}
+
+interface UpcomingSession {
+  id: number;
+  clientName: string;
+  date: string;
+  time: string;
+  status: string;
+}
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+}
+
+interface LoginResponse {
+  token: string;
+  user: User;
+}
+
 class ApiService {
   private getHeaders(): HeadersInit {
     const token = localStorage.getItem('token');
@@ -25,21 +60,20 @@ class ApiService {
   }
 
   // Auth endpoints
-  async login(email: string, password: string) {
-    return this.request('/api/auth/login', {
+  async login(email: string, password: string): Promise<LoginResponse> {
+    return this.request<LoginResponse>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
   }
 
-  async getCurrentUser() {
-    return this.request('/api/auth/me');
+  async getCurrentUser(): Promise<User> {
+    return this.request<User>('/api/auth/me');
   }
 
   // Dashboard statistics
-  async getDashboardStats() {
-    const response = await this.request('/api/dashboard/stats');
-    return response;
+  async getDashboardStats(): Promise<DashboardStats> {
+    return this.request<DashboardStats>('/api/dashboard/stats');
   }
 
   // Client management
@@ -93,14 +127,14 @@ class ApiService {
   }
 
   // Recent activity
-  async getRecentActivity() {
-    const response = await this.request<any>('/api/dashboard/recent-activity');
+  async getRecentActivity(): Promise<RecentActivity[]> {
+    const response = await this.request<{ data: RecentActivity[] }>('/api/dashboard/recent-activity');
     return response.data || [];
   }
 
   // Upcoming sessions
-  async getUpcomingSessions() {
-    const response = await this.request<any>('/api/dashboard/upcoming-sessions');
+  async getUpcomingSessions(): Promise<UpcomingSession[]> {
+    const response = await this.request<{ data: UpcomingSession[] }>('/api/dashboard/upcoming-sessions');
     return response.data || [];
   }
 }

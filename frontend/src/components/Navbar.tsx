@@ -12,7 +12,7 @@ const Navbar: React.FC = () => {
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <h1 className="text-xl font-bold text-white">
-                <span className="text-secondary-400">NH</span> Personal
+                <span className="text-secondary-400">NH</span> Gestão de Alunos
               </h1>
             </div>
           </div>

@@ -35,12 +35,12 @@ const Login: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
-            <span className="text-secondary-400">NH</span> Personal
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-300">
-            Sistema de Gestão para Personal Trainers
-          </p>
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <span className="text-secondary-400">NH</span> Gestão de Alunos
+            </h1>
+            <p className="text-gray-600">Sistema de Gestão para Personal Trainers</p>
+          </div>
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

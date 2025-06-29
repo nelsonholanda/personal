@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script de Teste de Funcionalidades - NH Personal Trainer
+# Script de Teste de Funcionalidades - NH Gestão de Alunos
 # Versão: 1.0.0
 
 set -e
@@ -29,7 +29,7 @@ warning() {
     echo -e "${YELLOW}[AVISO]${NC} $1"
 }
 
-echo "🧪 Teste Completo de Funcionalidades - NH Personal Trainer"
+echo "🧪 Teste Completo de Funcionalidades - NH Gestão de Alunos"
 echo "=========================================================="
 
 # Verificar se a aplicação está rodando
@@ -80,7 +80,7 @@ test_endpoint() {
 }
 
 # 1. Testar página inicial
-test_endpoint "Página inicial" "GET" "http://localhost:3000" "" "" "html\|React\|NH Personal"
+test_endpoint "Página inicial" "GET" "http://localhost:3000" "" "" "html\|React\|NH Gestão"
 
 # 2. Testar login de administrador
 log "🔐 Testando login de administrador..."
