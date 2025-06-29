@@ -808,7 +808,7 @@ main() {
             stop_containers
             ;;
         "cleanup")
-            cleanup
+            cleanupreact
             ;;
         "backup")
             backup_database
@@ -823,6 +823,24 @@ main() {
             ;;
     esac
 }
+
+# --- [NH GESTÃO DE ALUNOS] GARANTIR DEPENDÊNCIAS DO FRONTEND ---
+log "🧹 Limpando dependências antigas do frontend..."
+cd frontend
+rm -rf node_modules package-lock.json
+
+log "🔍 Garantindo que react-scripts está no package.json..."
+if ! grep -q '"react-scripts"' package.json; then
+  npm install react-scripts@5.0.1 --save
+fi
+
+log "📦 Instalando dependências do frontend..."
+npm install
+cd ..
+
+# --- [NH GESTÃO DE ALUNOS] BUILD DOCKER SEM CACHE PARA FRONTEND ---
+log "🐳 Buildando imagem Docker do frontend sem cache..."
+docker compose build --no-cache frontend
 
 # Executar função principal
 main "$@" 
