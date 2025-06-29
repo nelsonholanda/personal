@@ -221,7 +221,15 @@ export const authController = {
 
       return res.json({
         success: true,
-        data: userWithoutPassword
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          phone: user.phone,
+          specialization: user.trainerProfile?.specialization,
+          bio: user.trainerProfile?.bio
+        }
       });
     } catch (error) {
       console.error('Get me error:', error);
