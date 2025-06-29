@@ -1,11 +1,11 @@
-FROM node:18-alpine
+FROM node:18-slim
 
 # Install system dependencies including OpenSSL
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y \
     openssl \
     libssl1.1 \
-    libc6-compat \
-    curl
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
@@ -32,8 +32,7 @@ RUN ls -la dist/ && test -f dist/index.js
 RUN npm prune --production
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
+RUN groupadd -r nodejs && useradd -r -g nodejs nodejs
 
 # Change ownership of the app directory
 RUN chown -R nodejs:nodejs /app
