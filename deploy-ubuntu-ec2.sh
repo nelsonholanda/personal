@@ -842,5 +842,21 @@ cd ..
 log "🐳 Buildando imagem Docker do frontend sem cache..."
 docker compose build --no-cache frontend
 
+# --- [NH GESTÃO DE ALUNOS] CONFIGURAR REACT_APP_API_URL AUTOMATICAMENTE ---
+log "🌐 Detectando IP público da instância EC2..."
+EC2_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 || hostname -I | awk '{print $1}')
+if [ -z "$EC2_IP" ]; then
+  log "⚠️  Não foi possível detectar o IP público automaticamente. Informe manualmente no .env do frontend."
+else
+  log "🌐 IP detectado: $EC2_IP"
+  cd frontend
+  if [ ! -f .env ]; then cp ../env.example .env; fi
+  sed -i "s|^REACT_APP_API_URL=.*|REACT_APP_API_URL=http://$EC2_IP:3001/api|g" .env
+  if ! grep -q '^REACT_APP_API_URL=' .env; then
+    echo "REACT_APP_API_URL=http://$EC2_IP:3001/api" >> .env
+  fi
+  cd ..
+fi
+
 # Executar função principal
 main "$@" 
