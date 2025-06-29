@@ -253,6 +253,75 @@ initialize_database() {
     log "✅ Inicialização do banco de dados concluída"
 }
 
+# Função para configurar IP público da EC2 manualmente
+detect_and_configure_ip() {
+    log "🌐 Configurando IP público da instância EC2..."
+    
+    echo ""
+    echo "🔧 Configuração do IP Público da EC2"
+    echo "===================================="
+    echo "Digite o IP público da sua instância EC2"
+    echo "Exemplo: 3.250.123.45"
+    echo ""
+    
+    while true; do
+        read -p "IP público da EC2: " EC2_IP
+        
+        if [ -z "$EC2_IP" ]; then
+            echo "❌ IP não pode estar vazio. Tente novamente."
+            continue
+        fi
+        
+        # Validar formato do IP
+        if [[ $EC2_IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo ""
+            read -p "Confirmar IP: $EC2_IP? (s/n): " CONFIRM_IP
+            if [[ $CONFIRM_IP =~ ^[Ss]$ ]]; then
+                break
+            else
+                echo "Digite o IP novamente:"
+                continue
+            fi
+        else
+            echo "❌ Formato de IP inválido. Use o formato: xxx.xxx.xxx.xxx"
+            continue
+        fi
+    done
+    
+    success "IP configurado: $EC2_IP"
+    
+    # Configurar no .env do frontend
+    log "⚙️ Configurando REACT_APP_API_URL no frontend..."
+    cd frontend
+    
+    # Criar .env se não existir
+    if [ ! -f .env ]; then
+        cp ../env.example .env 2>/dev/null || touch .env
+    fi
+    
+    # Atualizar ou adicionar REACT_APP_API_URL
+    if grep -q '^REACT_APP_API_URL=' .env; then
+        # Atualizar linha existente
+        sed -i "s|^REACT_APP_API_URL=.*|REACT_APP_API_URL=http://$EC2_IP:3001/api|g" .env
+    else
+        # Adicionar nova linha
+        echo "REACT_APP_API_URL=http://$EC2_IP:3001/api" >> .env
+    fi
+    
+    # Verificar se foi configurado corretamente
+    if grep -q "REACT_APP_API_URL=http://$EC2_IP:3001/api" .env; then
+        success "REACT_APP_API_URL configurado: http://$EC2_IP:3001/api"
+    else
+        error "Falha ao configurar REACT_APP_API_URL"
+    fi
+    
+    cd ..
+    
+    # Salvar IP para uso posterior
+    echo "$EC2_IP" > .ec2_ip
+    success "IP da EC2 salvo para uso posterior"
+}
+
 # Função para fazer deploy
 deploy_application() {
     log "🚀 Iniciando deploy da aplicação..."
@@ -261,6 +330,9 @@ deploy_application() {
     if [ ! -f "docker-compose.yml" ]; then
         error "Arquivo docker-compose.yml não encontrado. Execute este script no diretório raiz do projeto."
     fi
+    
+    # Configurar IP público ANTES da inicialização do banco
+    detect_and_configure_ip
     
     # Inicializar banco de dados ANTES do deploy
     initialize_database
@@ -310,8 +382,12 @@ deploy_application() {
 
 # Função para mostrar informações do deploy
 show_deploy_info() {
-    # Obter IP público da instância
-    PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "localhost")
+    # Obter IP público da instância (usar o salvo ou detectar novamente)
+    if [ -f ".ec2_ip" ]; then
+        PUBLIC_IP=$(cat .ec2_ip)
+    else
+        PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "localhost")
+    fi
     
     echo ""
     echo "🎉 DEPLOY CONCLUÍDO COM SUCESSO!"
@@ -327,6 +403,7 @@ show_deploy_info() {
     echo ""
     echo "✅ Banco de dados inicializado automaticamente"
     echo "✅ Usuário admin criado automaticamente"
+    echo "✅ IP público configurado automaticamente"
     echo ""
     echo "🔧 Comandos úteis:"
     echo "   Status: $0 status"
@@ -863,22 +940,6 @@ cd ..
 # --- [NH GESTÃO DE ALUNOS] BUILD DOCKER SEM CACHE PARA FRONTEND ---
 log "🐳 Buildando imagem Docker do frontend sem cache..."
 docker compose build --no-cache frontend
-
-# --- [NH GESTÃO DE ALUNOS] CONFIGURAR REACT_APP_API_URL AUTOMATICAMENTE ---
-log "🌐 Detectando IP público da instância EC2..."
-EC2_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 || hostname -I | awk '{print $1}')
-if [ -z "$EC2_IP" ]; then
-  log "⚠️  Não foi possível detectar o IP público automaticamente. Informe manualmente no .env do frontend."
-else
-  log "🌐 IP detectado: $EC2_IP"
-  cd frontend
-  if [ ! -f .env ]; then cp ../env.example .env; fi
-  sed -i "s|^REACT_APP_API_URL=.*|REACT_APP_API_URL=http://$EC2_IP:3001/api|g" .env
-  if ! grep -q '^REACT_APP_API_URL=' .env; then
-    echo "REACT_APP_API_URL=http://$EC2_IP:3001/api" >> .env
-  fi
-  cd ..
-fi
 
 # Executar função principal
 main "$@" 
