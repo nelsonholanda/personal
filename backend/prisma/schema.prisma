@@ -418,6 +418,20 @@ model FinancialReport {
   @@map("financial_reports")
 }
 
+model AdminLog {
+  id         Int      @id @default(autoincrement())
+  adminId    Int      @map("admin_id")
+  action     String   @db.VarChar(255)
+  targetUserId Int?   @map("target_user_id")
+  details    String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  admin      User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  targetUser User?    @relation(fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@map("admin_logs")
+}
+
 // Enums
 enum UserRole {
   trainer

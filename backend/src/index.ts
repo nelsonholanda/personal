@@ -13,6 +13,7 @@ import clientManagementRoutes from './routes/clientManagement';
 import paymentRoutes from './routes/payments';
 import passwordRoutes from './routes/passwords';
 import dashboardRoutes from './routes/dashboard';
+import adminRoutes from './routes/admin';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -87,6 +88,7 @@ app.use('/api/passwords', passwordRoutes);
 app.use('/api/client-management', authMiddleware, clientManagementRoutes);
 app.use('/api/payments', authMiddleware, paymentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handling middleware
 app.use(notFound);
