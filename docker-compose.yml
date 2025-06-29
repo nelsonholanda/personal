@@ -12,13 +12,14 @@ services:
       - "3001:3001"
     environment:
       - NODE_ENV=production
-      - AWS_SECRET_NAME=${AWS_SECRET_NAME}
-      - AWS_REGION=${AWS_REGION:-us-east-2}
-      - RDS_HOST=${RDS_HOST}
-      - RDS_PORT=${RDS_PORT:-3306}
-      - RDS_USERNAME=${RDS_USERNAME}
-      - RDS_PASSWORD=${RDS_PASSWORD}
-      - RDS_DATABASE=${RDS_DATABASE}
+      - DB_HOST=personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com
+      - DB_PORT=3306
+      - DB_USERNAME=admin
+      - DB_PASSWORD=Rdms95gn!
+      - DB_NAME=personal_trainer_db
+      - JWT_SECRET=nh-personal-jwt-secret-2024
+      - BCRYPT_SALT_ROUNDS=12
+      - LOG_LEVEL=info
     networks:
       - personal_trainer_network
     healthcheck:
@@ -29,8 +30,6 @@ services:
       start_period: 120s
     volumes:
       - /var/log/nh-personal:/opt/nh-personal/logs
-    depends_on:
-      - mysql
 
   # Frontend React App
   frontend:
@@ -48,33 +47,6 @@ services:
     environment:
       - REACT_APP_API_URL=http://localhost:3001/api
       - NODE_ENV=production
-
-  # MySQL Database
-  mysql:
-    image: mysql:8.0
-    container_name: personal_trainer_mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-personal_trainer_db}
-      MYSQL_USER: ${MYSQL_USER:-admin}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - personal_trainer_network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
-volumes:
-  mysql_data:
 
 networks:
   personal_trainer_network:
