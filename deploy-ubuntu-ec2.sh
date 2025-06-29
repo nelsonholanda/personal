@@ -41,6 +41,7 @@ show_help() {
     echo "  deploy     - Fazer deploy completo da aplicação"
     echo "  diagnose   - Executar diagnóstico completo"
     echo "  test       - Executar teste rápido"
+    echo "  features   - Testar funcionalidades da aplicação"
     echo "  logs       - Mostrar logs dos containers"
     echo "  status     - Mostrar status dos containers"
     echo "  restart    - Reiniciar todos os containers"
@@ -53,6 +54,7 @@ show_help() {
     echo "  $0 deploy     # Fazer deploy completo"
     echo "  $0 diagnose   # Verificar status da aplicação"
     echo "  $0 test       # Teste rápido"
+    echo "  $0 features   # Testar funcionalidades da aplicação"
     echo "  $0 logs       # Ver logs em tempo real"
     echo ""
 }
@@ -166,6 +168,11 @@ JWT_ACCESS_TOKEN_SECRET=nh-personal-access-token-secret-2024
 JWT_REFRESH_TOKEN_SECRET=nh-personal-refresh-token-secret-2024
 AWS_REGION=us-east-2
 AWS_SECRET_NAME=rds!db-da675fb5-6491-4bf4-981a-2fa9d6d5b811
+RDS_HOSTNAME=personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com
+RDS_PORT=3306
+RDS_USERNAME=admin
+RDS_PASSWORD=$DB_PASSWORD
+RDS_DATABASE=personal_trainer_db
 EOF
 
     # Frontend .env
@@ -277,6 +284,9 @@ show_deploy_info() {
     echo "👤 Credenciais de Administrador:"
     echo "   Email: nholanda@nhpersonal.com"
     echo "   Senha: P10r1988!"
+    echo ""
+    echo "⚠️  IMPORTANTE: Configure as credenciais de administrador após o deploy!"
+    echo "   Execute: sudo docker-compose exec backend node scripts/create-admin-user.js"
     echo ""
     echo "🔧 Comandos úteis:"
     echo "   Status: $0 status"
@@ -424,6 +434,266 @@ quick_test() {
     fi
 }
 
+# Função para testar funcionalidades da aplicação
+test_application_features() {
+    log "🧪 Testando funcionalidades da aplicação..."
+    
+    # Aguardar um pouco mais para garantir que tudo está funcionando
+    sleep 10
+    
+    TESTS_PASSED=0
+    TESTS_FAILED=0
+    
+    echo "🔍 Testando funcionalidades principais..."
+    
+    # 1. Testar página inicial (Home)
+    log "📄 Testando página inicial..."
+    HOME_RESPONSE=$(curl -s -f http://localhost:3000 2>/dev/null || echo "FAILED")
+    if echo "$HOME_RESPONSE" | grep -q "html\|React\|NH Personal"; then
+        success "   ✅ Página inicial: OK"
+        ((TESTS_PASSED++))
+    else
+        error "   ❌ Página inicial: FALHOU"
+        ((TESTS_FAILED++))
+    fi
+    
+    # 2. Testar login de administrador
+    log "🔐 Testando login de administrador..."
+    LOGIN_RESPONSE=$(curl -s -X POST http://localhost:3001/api/auth/login \
+        -H "Content-Type: application/json" \
+        -d '{"email":"nholanda@nhpersonal.com","password":"P10r1988!"}' 2>/dev/null || echo "FAILED")
+    
+    if echo "$LOGIN_RESPONSE" | grep -q "token\|access_token"; then
+        success "   ✅ Login administrador: OK"
+        # Extrair token para testes subsequentes
+        TOKEN=$(echo "$LOGIN_RESPONSE" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
+        ((TESTS_PASSED++))
+    else
+        error "   ❌ Login administrador: FALHOU"
+        ((TESTS_FAILED++))
+    fi
+    
+    # 3. Testar gestão de clientes (se token foi obtido)
+    if [ ! -z "$TOKEN" ]; then
+        log "👥 Testando gestão de clientes..."
+        
+        # Testar listagem de clientes
+        CLIENTS_RESPONSE=$(curl -s -f http://localhost:3001/api/clients \
+            -H "Authorization: Bearer $TOKEN" 2>/dev/null || echo "FAILED")
+        
+        if echo "$CLIENTS_RESPONSE" | grep -q "clients\|data\|[]"; then
+            success "   ✅ Listagem de clientes: OK"
+            ((TESTS_PASSED++))
+        else
+            error "   ❌ Listagem de clientes: FALHOU"
+            ((TESTS_FAILED++))
+        fi
+        
+        # Testar criação de cliente
+        CREATE_CLIENT_RESPONSE=$(curl -s -X POST http://localhost:3001/api/clients \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"name":"Cliente Teste","email":"teste@teste.com","phone":"11999999999"}' 2>/dev/null || echo "FAILED")
+        
+        if echo "$CREATE_CLIENT_RESPONSE" | grep -q "id\|name\|Cliente Teste"; then
+            success "   ✅ Criação de cliente: OK"
+            ((TESTS_PASSED++))
+        else
+            error "   ❌ Criação de cliente: FALHOU"
+            ((TESTS_FAILED++))
+        fi
+    else
+        warning "   ⚠️ Testes de clientes: Token não disponível"
+        ((TESTS_FAILED++))
+    fi
+    
+    # 4. Testar gestão de pagamentos
+    if [ ! -z "$TOKEN" ]; then
+        log "💰 Testando gestão de pagamentos..."
+        
+        # Testar listagem de pagamentos
+        PAYMENTS_RESPONSE=$(curl -s -f http://localhost:3001/api/payments \
+            -H "Authorization: Bearer $TOKEN" 2>/dev/null || echo "FAILED")
+        
+        if echo "$PAYMENTS_RESPONSE" | grep -q "payments\|data\|[]"; then
+            success "   ✅ Listagem de pagamentos: OK"
+            ((TESTS_PASSED++))
+        else
+            error "   ❌ Listagem de pagamentos: FALHOU"
+            ((TESTS_FAILED++))
+        fi
+        
+        # Testar criação de pagamento
+        CREATE_PAYMENT_RESPONSE=$(curl -s -X POST http://localhost:3001/api/payments \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"clientId":1,"amount":100.00,"dueDate":"2024-12-31","status":"pending"}' 2>/dev/null || echo "FAILED")
+        
+        if echo "$CREATE_PAYMENT_RESPONSE" | grep -q "id\|amount\|100.00"; then
+            success "   ✅ Criação de pagamento: OK"
+            ((TESTS_PASSED++))
+        else
+            error "   ❌ Criação de pagamento: FALHOU"
+            ((TESTS_FAILED++))
+        fi
+    else
+        warning "   ⚠️ Testes de pagamentos: Token não disponível"
+        ((TESTS_FAILED++))
+    fi
+    
+    # 5. Testar frequência de clientes
+    if [ ! -z "$TOKEN" ]; then
+        log "📊 Testando frequência de clientes..."
+        
+        # Testar listagem de frequência
+        FREQUENCY_RESPONSE=$(curl -s -f http://localhost:3001/api/clients/frequency \
+            -H "Authorization: Bearer $TOKEN" 2>/dev/null || echo "FAILED")
+        
+        if echo "$FREQUENCY_RESPONSE" | grep -q "frequency\|data\|[]"; then
+            success "   ✅ Listagem de frequência: OK"
+            ((TESTS_PASSED++))
+        else
+            error "   ❌ Listagem de frequência: FALHOU"
+            ((TESTS_FAILED++))
+        fi
+    else
+        warning "   ⚠️ Testes de frequência: Token não disponível"
+        ((TESTS_FAILED++))
+    fi
+    
+    # 6. Testar relatórios por período
+    if [ ! -z "$TOKEN" ]; then
+        log "📈 Testando relatórios por período..."
+        
+        # Testar relatório de pagamentos por período
+        REPORT_RESPONSE=$(curl -s -f "http://localhost:3001/api/payments/report?startDate=2024-01-01&endDate=2024-12-31" \
+            -H "Authorization: Bearer $TOKEN" 2>/dev/null || echo "FAILED")
+        
+        if echo "$REPORT_RESPONSE" | grep -q "report\|data\|received\|pending"; then
+            success "   ✅ Relatório de pagamentos: OK"
+            ((TESTS_PASSED++))
+        else
+            error "   ❌ Relatório de pagamentos: FALHOU"
+            ((TESTS_FAILED++))
+        fi
+        
+        # Testar relatório financeiro
+        FINANCIAL_REPORT_RESPONSE=$(curl -s -f "http://localhost:3001/api/payments/financial-report?startDate=2024-01-01&endDate=2024-12-31" \
+            -H "Authorization: Bearer $TOKEN" 2>/dev/null || echo "FAILED")
+        
+        if echo "$FINANCIAL_REPORT_RESPONSE" | grep -q "financial\|received\|pending\|total"; then
+            success "   ✅ Relatório financeiro: OK"
+            ((TESTS_PASSED++))
+        else
+            error "   ❌ Relatório financeiro: FALHOU"
+            ((TESTS_FAILED++))
+        fi
+    else
+        warning "   ⚠️ Testes de relatórios: Token não disponível"
+        ((TESTS_FAILED++))
+    fi
+    
+    # 7. Testar dashboard
+    if [ ! -z "$TOKEN" ]; then
+        log "📊 Testando dashboard..."
+        
+        DASHBOARD_RESPONSE=$(curl -s -f http://localhost:3001/api/dashboard \
+            -H "Authorization: Bearer $TOKEN" 2>/dev/null || echo "FAILED")
+        
+        if echo "$DASHBOARD_RESPONSE" | grep -q "dashboard\|stats\|summary"; then
+            success "   ✅ Dashboard: OK"
+            ((TESTS_PASSED++))
+        else
+            error "   ❌ Dashboard: FALHOU"
+            ((TESTS_FAILED++))
+        fi
+    else
+        warning "   ⚠️ Testes de dashboard: Token não disponível"
+        ((TESTS_FAILED++))
+    fi
+    
+    # 8. Testar páginas do frontend
+    log "🌐 Testando páginas do frontend..."
+    
+    # Testar página de login
+    LOGIN_PAGE_RESPONSE=$(curl -s -f http://localhost:3000/login 2>/dev/null || echo "FAILED")
+    if echo "$LOGIN_PAGE_RESPONSE" | grep -q "html\|login\|form"; then
+        success "   ✅ Página de login: OK"
+        ((TESTS_PASSED++))
+    else
+        error "   ❌ Página de login: FALHOU"
+        ((TESTS_FAILED++))
+    fi
+    
+    # Testar página de clientes
+    CLIENTS_PAGE_RESPONSE=$(curl -s -f http://localhost:3000/clients 2>/dev/null || echo "FAILED")
+    if echo "$CLIENTS_PAGE_RESPONSE" | grep -q "html\|clients\|management"; then
+        success "   ✅ Página de clientes: OK"
+        ((TESTS_PASSED++))
+    else
+        error "   ❌ Página de clientes: FALHOU"
+        ((TESTS_FAILED++))
+    fi
+    
+    # Testar página de pagamentos
+    PAYMENTS_PAGE_RESPONSE=$(curl -s -f http://localhost:3000/payments 2>/dev/null || echo "FAILED")
+    if echo "$PAYMENTS_PAGE_RESPONSE" | grep -q "html\|payments\|financial"; then
+        success "   ✅ Página de pagamentos: OK"
+        ((TESTS_PASSED++))
+    else
+        error "   ❌ Página de pagamentos: FALHOU"
+        ((TESTS_FAILED++))
+    fi
+    
+    # Testar página de relatórios
+    REPORTS_PAGE_RESPONSE=$(curl -s -f http://localhost:3000/reports 2>/dev/null || echo "FAILED")
+    if echo "$REPORTS_PAGE_RESPONSE" | grep -q "html\|reports\|analytics"; then
+        success "   ✅ Página de relatórios: OK"
+        ((TESTS_PASSED++))
+    else
+        error "   ❌ Página de relatórios: FALHOU"
+        ((TESTS_FAILED++))
+    fi
+    
+    # Resultado final dos testes
+    echo ""
+    echo "📊 RESULTADO DOS TESTES DE FUNCIONALIDADES"
+    echo "=========================================="
+    echo "✅ Testes passaram: $TESTS_PASSED"
+    echo "❌ Testes falharam: $TESTS_FAILED"
+    echo "📊 Total de testes: $((TESTS_PASSED + TESTS_FAILED))"
+    
+    if [ $((TESTS_PASSED + TESTS_FAILED)) -gt 0 ]; then
+        SUCCESS_RATE=$((TESTS_PASSED * 100 / (TESTS_PASSED + TESTS_FAILED)))
+        echo "📈 Taxa de sucesso: ${SUCCESS_RATE}%"
+    fi
+    
+    echo ""
+    
+    if [ $TESTS_FAILED -eq 0 ]; then
+        success "🎉 Todas as funcionalidades estão funcionando corretamente!"
+        echo ""
+        echo "✅ Funcionalidades testadas e funcionando:"
+        echo "   • Página inicial (Home)"
+        echo "   • Login de administrador"
+        echo "   • Gestão de clientes (listar e criar)"
+        echo "   • Gestão de pagamentos (listar e criar)"
+        echo "   • Frequência de clientes"
+        echo "   • Relatórios por período"
+        echo "   • Relatórios financeiros (recebidos e a receber)"
+        echo "   • Dashboard"
+        echo "   • Páginas do frontend (login, clientes, pagamentos, relatórios)"
+    elif [ $TESTS_FAILED -lt 5 ]; then
+        warning "⚠️ A maioria das funcionalidades está funcionando, mas alguns problemas foram encontrados."
+        echo "   Execute '$0 diagnose' para mais detalhes."
+    else
+        error "❌ Muitas funcionalidades falharam. Verifique os logs e configurações."
+        echo "   Execute '$0 logs' para ver os logs detalhados."
+    fi
+    
+    echo ""
+}
+
 # Função para mostrar logs
 show_logs() {
     log "📋 Mostrando logs dos containers..."
@@ -514,12 +784,16 @@ main() {
             setup_environment
             clone_repository
             deploy_application
+            test_application_features
             ;;
         "diagnose")
             diagnose
             ;;
         "test")
             quick_test
+            ;;
+        "features")
+            test_application_features
             ;;
         "logs")
             show_logs

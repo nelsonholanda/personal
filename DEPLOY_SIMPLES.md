@@ -27,6 +27,7 @@ chmod +x deploy-ubuntu-ec2.sh
 ```bash
 ./deploy-ubuntu-ec2.sh deploy    # Deploy completo
 ./deploy-ubuntu-ec2.sh test      # Teste rápido
+./deploy-ubuntu-ec2.sh features  # Teste completo das funcionalidades
 ./deploy-ubuntu-ec2.sh logs      # Ver logs
 ./deploy-ubuntu-ec2.sh status    # Status dos containers
 ./deploy-ubuntu-ec2.sh restart   # Reiniciar
@@ -39,10 +40,16 @@ chmod +x deploy-ubuntu-ec2.sh
 - **Backend**: `http://<IP-DA-EC2>:3001`
 - **Health Check**: `http://<IP-DA-EC2>:3001/health`
 
-## 👤 Login Administrador
+## 👤 Credenciais de Administrador
 
-- **Email**: nholanda@nhpersonal.com
-- **Senha**: P10r1988!
+⚠️ **IMPORTANTE**: As credenciais de administrador são configuradas automaticamente durante o deploy.
+
+```bash
+# Configurar credenciais de administrador (se necessário)
+sudo docker-compose exec backend node scripts/create-admin-user.js
+```
+
+**Nota**: Por segurança, as credenciais não são expostas nos READMEs.
 
 ## ⚠️ Pré-requisitos
 

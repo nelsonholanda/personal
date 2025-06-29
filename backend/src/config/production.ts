@@ -1,12 +1,8 @@
 export const productionConfig = {
   // Configurações do Servidor
   server: {
-    port: process.env.PORT || 3001,
-    host: '0.0.0.0',
-    cors: {
-      origin: process.env.FRONTEND_URL || 'https://nhpersonal.com',
-      credentials: true,
-    },
+    port: parseInt(process.env.PORT || '3001'),
+    host: process.env.HOST || '0.0.0.0',
   },
 
   // Configurações do Banco de Dados
@@ -16,25 +12,19 @@ export const productionConfig = {
     username: process.env.DB_USERNAME || 'admin',
     password: process.env.DB_PASSWORD_ENCRYPTED || 'Rdms95gn!', // Senha descriptografada
     database: process.env.DB_NAME || 'personal_trainer_db',
-    pool: {
-      min: 2,
-      max: 10,
-    },
   },
 
   // Configurações de Segurança
   security: {
     jwt: {
-      accessTokenSecret: process.env.JWT_ACCESS_TOKEN_SECRET || 'nh-personal-access-token-secret-2024',
-      refreshTokenSecret: process.env.JWT_REFRESH_TOKEN_SECRET || 'nh-personal-refresh-token-secret-2024',
-      accessTokenExpiresIn: '15m',
-      refreshTokenExpiresIn: '7d',
+      secret: process.env.JWT_SECRET || '[JWT_SECRET]',
+      expiresIn: process.env.JWT_EXPIRES_IN || '24h',
     },
     bcrypt: {
       saltRounds: 12,
     },
     encryption: {
-      key: process.env.ENCRYPTION_KEY || 'nh-personal-encryption-key-2024',
+      key: process.env.ENCRYPTION_KEY || '[ENCRYPTION_KEY]',
     },
     rateLimit: {
       windowMs: 15 * 60 * 1000, // 15 minutos
@@ -66,5 +56,11 @@ export const productionConfig = {
     healthCheckInterval: 30000,
     enableMetrics: true,
     metricsPort: 9090,
+  },
+
+  // Configurações de CORS
+  cors: {
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    credentials: true,
   },
 }; 

@@ -48,14 +48,17 @@ console.log('================================');
 console.log(`Chave de criptografia: ${secretKey}`);
 console.log(`Senha original: ${databasePassword}`);
 console.log(`Senha criptografada: ${encryptedPassword}`);
-console.log('');
 
 // Testar descriptografia
 const decryptedPassword = decrypt(encryptedPassword);
 console.log('✅ Teste de descriptografia:');
 console.log(`Senha descriptografada: ${decryptedPassword}`);
-console.log(`Teste de igualdade: ${databasePassword === decryptedPassword ? '✅ PASS' : '❌ FAIL'}`);
-console.log('');
+
+if (databasePassword === decryptedPassword) {
+  console.log('🎉 Criptografia funcionando corretamente!');
+} else {
+  console.log('❌ Erro na criptografia!');
+}
 
 // Gerar variáveis de ambiente
 console.log('📝 Variáveis de ambiente para .env:');

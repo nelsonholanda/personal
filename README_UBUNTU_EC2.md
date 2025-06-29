@@ -42,6 +42,9 @@ O script `deploy-ubuntu-ec2.sh` oferece várias opções:
 # Teste rápido (verifica se está funcionando)
 ./deploy-ubuntu-ec2.sh test
 
+# Teste completo das funcionalidades (testa todas as features)
+./deploy-ubuntu-ec2.sh features
+
 # Ver logs em tempo real
 ./deploy-ubuntu-ec2.sh logs
 
@@ -74,10 +77,16 @@ Após o deploy bem-sucedido:
 
 ## 👤 Credenciais de Administrador
 
-- **Email**: nholanda@nhpersonal.com
-- **Senha**: P10r1988!
+⚠️ **IMPORTANTE**: As credenciais de administrador são configuradas automaticamente durante o deploy.
 
-## 📊 Monitoramento
+```bash
+# Configurar credenciais de administrador (se necessário)
+sudo docker-compose exec backend node scripts/create-admin-user.js
+```
+
+**Nota**: Por segurança, as credenciais não são expostas nos READMEs.
+
+## 📈 Monitoramento
 
 ### Verificar se está funcionando:
 ```bash

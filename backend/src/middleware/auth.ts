@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import databaseService from '../services/databaseService';
+import { PrismaClient } from '@prisma/client';
 
-const prisma = databaseService.getPrismaClient();
+const prisma = new PrismaClient();
 
 interface JwtPayload {
   userId: number;
@@ -13,11 +13,7 @@ interface JwtPayload {
 declare global {
   namespace Express {
     interface Request {
-      user?: {
-        id: number;
-        email: string;
-        role: string;
-      };
+      user?: any;
     }
   }
 }
