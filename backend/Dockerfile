@@ -3,7 +3,7 @@ FROM node:18-slim
 # Install system dependencies including OpenSSL
 RUN apt-get update && apt-get install -y \
     openssl \
-    libssl1.1 \
+    libssl3 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
