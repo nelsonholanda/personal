@@ -1,5 +1,12 @@
 FROM node:18-alpine
 
+# Install system dependencies including OpenSSL
+RUN apk add --no-cache \
+    openssl \
+    libssl1.1 \
+    libc6-compat \
+    curl
+
 # Set working directory
 WORKDIR /app
 
