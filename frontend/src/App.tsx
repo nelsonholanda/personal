@@ -21,6 +21,7 @@ import Profile from './pages/Profile';
 import ClientManagement from './pages/ClientManagement';
 import Payments from './pages/Payments';
 import PasswordManagement from './pages/PasswordManagement';
+import AdminDashboard from './pages/AdminDashboard';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -70,6 +71,29 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
+// Protected Route for Admin
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== 'admin') return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
+};
+
+// Redirecionamento pós-login
+const RoleRedirect: React.FC = () => {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'admin') return <Navigate to="/admin" replace />;
+  return <Navigate to="/dashboard" replace />;
+};
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -97,7 +121,10 @@ function App() {
                   }
                 />
 
-                {/* Protected Routes */}
+                {/* Admin Route */}
+                <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+
+                {/* Protected Routes para personais */}
                 <Route
                   path="/"
                   element={
@@ -106,7 +133,7 @@ function App() {
                     </ProtectedRoute>
                   }
                 >
-                  <Route index element={<Navigate to="/dashboard" replace />} />
+                  <Route index element={<RoleRedirect />} />
                   <Route path="dashboard" element={<Dashboard />} />
                   <Route path="clients" element={<ClientManagement />} />
                   <Route path="payments" element={<Payments />} />
@@ -115,7 +142,7 @@ function App() {
                 </Route>
 
                 {/* Catch all route */}
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>
             <Footer />

@@ -17,115 +17,70 @@ async function createAdminUser() {
   try {
     console.log('🔐 Conectando ao banco de dados...');
     await prisma.$connect();
-    
-    // Verificar se o usuário já existe
-    const existingUser = await prisma.user.findUnique({
-      where: { email: 'nholanda@nhpersonal.com' }
-    });
 
-    if (existingUser) {
-      console.log('⚠️ Usuário nholanda já existe!');
-      console.log('📝 Atualizando senha e perfil...');
-      
+    // Apagar todos os usuários que não são admin
+    await prisma.user.deleteMany({ where: { role: { not: 'admin' } } });
+    // Apagar também o usuário nholanda@nhpersonal.com se existir
+    await prisma.user.deleteMany({ where: { email: 'nholanda@nhpersonal.com' } });
+
+    // Verificar se o usuário admin 'nholanda' já existe
+    let adminUser = await prisma.user.findFirst({ where: { name: 'nholanda', role: 'admin' } });
+
+    if (adminUser) {
       // Atualizar senha
       const hashedPassword = await bcrypt.hash('P10r1988!', 12);
-      
       await prisma.user.update({
-        where: { id: existingUser.id },
+        where: { id: adminUser.id },
         data: {
           passwordHash: hashedPassword,
-          role: 'admin',
-          name: 'Nelson Holanda',
-          phone: '+55 11 99999-9999',
           isActive: true,
-          updatedAt: new Date()
-        }
+          updatedAt: new Date(),
+        },
       });
-      
-      console.log('✅ Usuário nholanda atualizado com sucesso!');
+      console.log('✅ Usuário admin "nholanda" atualizado com sucesso!');
     } else {
-      console.log('👤 Criando usuário administrador nholanda...');
-      
-      // Criar hash da senha
+      // Criar usuário admin
       const hashedPassword = await bcrypt.hash('P10r1988!', 12);
-      
-      // Criar usuário administrador
-      const adminUser = await prisma.user.create({
+      adminUser = await prisma.user.create({
         data: {
-          name: 'Nelson Holanda',
-          email: 'nholanda@nhpersonal.com',
+          name: 'nholanda',
           passwordHash: hashedPassword,
           role: 'admin',
-          phone: '+55 11 99999-9999',
-          birthDate: new Date('1988-10-01'),
-          gender: 'male',
-          height: 1.75,
-          weight: 80.0,
           isActive: true,
           passwordChangedAt: new Date(),
           createdAt: new Date(),
-          updatedAt: new Date()
-        }
+          updatedAt: new Date(),
+        },
       });
-      
-      console.log('✅ Usuário administrador criado com sucesso!');
-      console.log(`🆔 ID: ${adminUser.id}`);
+      console.log('✅ Usuário admin "nholanda" criado com sucesso!');
     }
-    
-    // Criar perfil de treinador para o administrador
-    const adminUser = await prisma.user.findUnique({
-      where: { email: 'nholanda@nhpersonal.com' }
-    });
-    
-    if (adminUser) {
-      const existingTrainerProfile = await prisma.trainerProfile.findUnique({
-        where: { userId: adminUser.id }
+
+    // Criar perfil de treinador para o admin se não existir
+    const existingTrainerProfile = await prisma.trainerProfile.findUnique({ where: { userId: adminUser.id } });
+    if (!existingTrainerProfile) {
+      await prisma.trainerProfile.create({
+        data: {
+          userId: adminUser.id,
+          specialization: 'Personal Trainer, Treinamento Funcional, Musculação',
+          experienceYears: 15,
+          certifications: 'CREF, Especialização em Treinamento Funcional, Certificação em Nutrição Esportiva',
+          bio: 'Administrador e Personal Trainer do sistema.',
+          hourlyRate: 150.00,
+          availability: JSON.stringify({}),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
       });
-      
-      if (!existingTrainerProfile) {
-        console.log('🏋️ Criando perfil de treinador...');
-        
-        await prisma.trainerProfile.create({
-          data: {
-            userId: adminUser.id,
-            specialization: 'Personal Trainer, Treinamento Funcional, Musculação',
-            experienceYears: 15,
-            certifications: 'CREF - Conselho Regional de Educação Física\nEspecialização em Treinamento Funcional\nCertificação em Nutrição Esportiva',
-            bio: 'Personal Trainer com mais de 15 anos de experiência, especializado em treinamento funcional e musculação. Formado em Educação Física e com diversas certificações na área.',
-            hourlyRate: 150.00,
-            availability: JSON.stringify({
-              monday: { morning: true, afternoon: true, evening: true },
-              tuesday: { morning: true, afternoon: true, evening: true },
-              wednesday: { morning: true, afternoon: true, evening: true },
-              thursday: { morning: true, afternoon: true, evening: true },
-              friday: { morning: true, afternoon: true, evening: false },
-              saturday: { morning: true, afternoon: false, evening: false },
-              sunday: { morning: false, afternoon: false, evening: false }
-            }),
-            createdAt: new Date(),
-            updatedAt: new Date()
-          }
-        });
-        
-        console.log('✅ Perfil de treinador criado com sucesso!');
-      } else {
-        console.log('⚠️ Perfil de treinador já existe!');
-      }
+      console.log('✅ Perfil de treinador para admin criado com sucesso!');
     }
-    
-    // Criar dados iniciais do sistema
-    await createInitialData(prisma);
-    
-    console.log('');
-    console.log('🎉 Configuração do sistema concluída!');
+
+    // Criar dados iniciais do sistema (caso queira manter)
+    // await createInitialData(prisma);
+
+    console.log('🎉 Configuração do admin concluída!');
     console.log('=====================================');
-    console.log('👤 Usuário: nholanda@nhpersonal.com');
-    console.log('🔑 Senha: P10r1988!');
-    console.log('👑 Perfil: Administrador');
-    console.log('🏋️ Perfil: Personal Trainer');
-    console.log('');
+    console.log('👤 Usuário: nholanda (admin)');
     console.log('💡 Use essas credenciais para acessar o sistema!');
-    
   } catch (error) {
     console.error('❌ Erro ao criar usuário administrador:', error);
   } finally {
@@ -133,69 +88,4 @@ async function createAdminUser() {
   }
 }
 
-async function createInitialData(prisma) {
-  console.log('📊 Criando dados iniciais do sistema...');
-  
-  // Criar métodos de pagamento
-  const paymentMethods = [
-    { name: 'Dinheiro', description: 'Pagamento em dinheiro' },
-    { name: 'PIX', description: 'Transferência via PIX' },
-    { name: 'Cartão de Crédito', description: 'Pagamento com cartão de crédito' },
-    { name: 'Cartão de Débito', description: 'Pagamento com cartão de débito' },
-    { name: 'Transferência Bancária', description: 'Transferência bancária' }
-  ];
-  
-  for (const method of paymentMethods) {
-    const existing = await prisma.paymentMethod.findFirst({
-      where: { name: method.name }
-    });
-    
-    if (!existing) {
-      await prisma.paymentMethod.create({
-        data: method
-      });
-    }
-  }
-  
-  // Criar planos de pagamento padrão
-  const paymentPlans = [
-    {
-      name: 'Plano Básico',
-      description: '3 sessões por semana',
-      price: 300.00,
-      durationWeeks: 4,
-      sessionsPerWeek: 3
-    },
-    {
-      name: 'Plano Intermediário',
-      description: '4 sessões por semana',
-      price: 400.00,
-      durationWeeks: 4,
-      sessionsPerWeek: 4
-    },
-    {
-      name: 'Plano Avançado',
-      description: '5 sessões por semana',
-      price: 500.00,
-      durationWeeks: 4,
-      sessionsPerWeek: 5
-    }
-  ];
-  
-  for (const plan of paymentPlans) {
-    const existing = await prisma.paymentPlan.findFirst({
-      where: { name: plan.name }
-    });
-    
-    if (!existing) {
-      await prisma.paymentPlan.create({
-        data: plan
-      });
-    }
-  }
-  
-  console.log('✅ Dados iniciais criados com sucesso!');
-}
-
-// Executar o script
-createAdminUser().catch(console.error); 
+createAdminUser(); 
