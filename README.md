@@ -48,9 +48,6 @@ Após o deploy bem-sucedido:
 
 ## 👤 Credenciais de Administrador
 
-- **Email**: nholanda@nhpersonal.com
-- **Senha**: P10r1988!
-
 ## 📁 Estrutura do Projeto
 
 ```
