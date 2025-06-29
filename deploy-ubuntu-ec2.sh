@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Garante que está na raiz do projeto (onde o script está)
+cd "$(dirname "$0")"
+
 # Script Completo de Deploy para Ubuntu EC2 - NH Gestão de Alunos
 # Versão: 4.0.0 - Ubuntu Server
 
@@ -749,23 +752,6 @@ backup_database() {
     fi
 }
 
-# Função para clonar repositório
-clone_repository() {
-    log "📥 Clonando repositório..."
-    
-    if [ ! -d "projeto-personal" ]; then
-        git clone https://github.com/nelsonholanda/personal.git projeto-personal
-        if [ $? -ne 0 ]; then
-            error "Falha ao clonar o repositório"
-        fi
-        success "Repositório clonado com sucesso"
-    else
-        success "Repositório já existe"
-    fi
-    
-    cd projeto-personal
-}
-
 # Função principal
 main() {
     # Verificar argumentos
@@ -782,7 +768,6 @@ main() {
             install_docker_compose
             configure_firewall
             setup_environment
-            clone_repository
             deploy_application
             test_application_features
             ;;
