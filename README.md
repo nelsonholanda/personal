@@ -5,103 +5,51 @@ Sistema completo de gerenciamento para personal trainers, incluindo controle de 
 ## 🚀 Deploy Rápido
 
 ### Pré-requisitos
-- Docker e Docker Compose instalados
-- Acesso ao Amazon RDS MySQL
-- Configuração do AWS Secrets Manager (opcional)
 
-### 1. Deploy Automático (Recomendado)
+* Ubuntu Server 20.04 ou superior
+* Instância EC2 t3.medium ou superior
+* Security Groups configurados para portas 22, 80, 443, 3000, 3001, 3306
 
-```bash
-# Executar deploy simplificado
-./deploy-simple.sh
-```
-
-Este script irá:
-- Criar arquivo `.env` se não existir
-- Verificar configurações
-- Limpar containers órfãos
-- Construir e iniciar os serviços
-
-### 2. Deploy Manual
-
-#### Configurar Variáveis de Ambiente
+### Deploy Automático
 
 ```bash
-# Criar arquivo .env
-./create-env.sh
+# 1. Conectar à EC2 Ubuntu
+ssh -i ~/.ssh/sua-chave.pem ubuntu@<IP-DA-EC2>
 
-# Editar configurações
-nano .env
+# 2. Clonar e executar
+git clone https://github.com/nelsonholanda/personal.git projeto-personal
+cd projeto-personal
+chmod +x deploy-ubuntu-ec2.sh
+./deploy-ubuntu-ec2.sh deploy
 ```
 
-Configure as variáveis do RDS:
-```env
-# Opção A: AWS Secrets Manager (recomendado)
-AWS_SECRET_NAME=rds!db-da675fb5-6491-4bf4-981a-2fa9d6d5b811
-AWS_REGION=us-east-2
-
-# Opção B: Variáveis diretas
-RDS_HOST=your-rds-endpoint.amazonaws.com
-RDS_USERNAME=admin
-RDS_PASSWORD=your-password
-RDS_DATABASE=personal_trainer_db
-```
-
-#### Executar Deploy
+### Comandos Disponíveis
 
 ```bash
-# Limpar ambiente e configurar
-./setup-env.sh
-
-# Fazer deploy
-./deploy-ec2-rds.sh
+./deploy-ubuntu-ec2.sh deploy    # Deploy completo
+./deploy-ubuntu-ec2.sh test      # Teste rápido
+./deploy-ubuntu-ec2.sh diagnose  # Diagnóstico completo
+./deploy-ubuntu-ec2.sh logs      # Ver logs
+./deploy-ubuntu-ec2.sh status    # Status dos containers
+./deploy-ubuntu-ec2.sh restart   # Reiniciar
+./deploy-ubuntu-ec2.sh stop      # Parar
+./deploy-ubuntu-ec2.sh cleanup   # Limpar
+./deploy-ubuntu-ec2.sh backup    # Backup do banco
+./deploy-ubuntu-ec2.sh help      # Ajuda
 ```
 
-### 3. Acessar Aplicação
+## 🌐 URLs da Aplicação
 
-- **Frontend:** http://localhost:3000
-- **Backend API:** http://localhost:3001
-- **Health Check:** http://localhost:3001/health
+Após o deploy bem-sucedido:
 
-> **Nota:** As aplicações são expostas diretamente nas portas 3000 e 3001. Para produção, recomenda-se usar um load balancer na frente.
+- **Frontend**: `http://<IP-DA-EC2>:3000`
+- **Backend**: `http://<IP-DA-EC2>:3001`
+- **Health Check**: `http://<IP-DA-EC2>:3001/health`
 
-## 🔧 Solução de Problemas
+## 👤 Credenciais de Administrador
 
-### Containers Reiniciando
-
-Se os containers estiverem reiniciando constantemente:
-
-```bash
-# Verificar logs
-docker-compose logs
-
-# Limpar containers órfãos
-docker-compose down --remove-orphans
-docker rm -f personal_trainer_mysql
-
-# Reconfigurar ambiente
-./setup-env.sh
-```
-
-### Variáveis de Ambiente Não Configuradas
-
-Se aparecer warnings sobre variáveis não configuradas:
-
-```bash
-# Criar e configurar .env
-./create-env.sh
-nano .env
-
-# Verificar configurações
-./setup-env.sh
-```
-
-### Testar Deploy
-
-```bash
-# Testar deploy sem nginx
-./test-deploy-no-nginx.sh
-```
+- **Email**: nholanda@nhpersonal.com
+- **Senha**: P10r1988!
 
 ## 📁 Estrutura do Projeto
 
@@ -121,49 +69,30 @@ projeto-personal/
 │   │   ├── pages/           # Páginas da aplicação
 │   │   └── contexts/        # Contextos React
 │   └── Dockerfile           # Container do frontend
+├── database/                # Scripts de inicialização do banco
 ├── docker-compose.yml       # Orquestração dos containers
-├── deploy-simple.sh         # Script de deploy simplificado
-├── create-env.sh            # Criar arquivo .env
-├── setup-env.sh             # Configurar ambiente
-└── RDS_DEPLOY_README.md     # Documentação detalhada
+├── deploy-ubuntu-ec2.sh     # Script único de deploy
+├── README_UBUNTU_EC2.md     # Documentação completa
+├── DEPLOY_SIMPLES.md        # Instruções rápidas
+└── env.example              # Exemplo de variáveis de ambiente
 ```
 
-## 🔧 Desenvolvimento
+## 🔧 Funcionalidades
 
-### Backend
-```bash
-cd backend
-npm install
-npm run dev
-```
-
-### Frontend
-```bash
-cd frontend
-npm install
-npm start
-```
-
-### Testar Build
-```bash
-./test-backend-build.sh
-```
-
-## �� Funcionalidades
-
-- **Autenticação:** Login/registro de usuários
-- **Gestão de Clientes:** Cadastro e controle de clientes
-- **Pagamentos:** Controle de pagamentos e faturas
-- **Dashboard:** Estatísticas e relatórios
-- **Perfis:** Perfis de trainer e cliente
+* **Autenticação:** Login/registro de usuários
+* **Gestão de Clientes:** Cadastro e controle de clientes
+* **Pagamentos:** Controle de pagamentos e faturas
+* **Dashboard:** Estatísticas e relatórios
+* **Perfis:** Perfis de trainer e cliente
 
 ## 🔒 Segurança
 
-- JWT para autenticação
-- AWS Secrets Manager para credenciais
-- Criptografia de senhas
-- Rate limiting
-- CORS configurado
+* JWT para autenticação
+* AWS Secrets Manager para credenciais
+* Criptografia de senhas
+* Rate limiting
+* CORS configurado
+* Firewall UFW configurado automaticamente
 
 ## 🐳 Docker
 
@@ -171,44 +100,110 @@ npm start
 
 ```bash
 # Ver status dos containers
-docker-compose ps
+sudo docker-compose ps
 
 # Ver logs
-docker-compose logs -f
+sudo docker-compose logs -f
 
 # Parar serviços
-docker-compose down
+sudo docker-compose down
 
 # Reiniciar backend
-docker-compose restart backend
+sudo docker-compose restart backend
 
 # Limpar containers órfãos
-docker-compose down --remove-orphans
+sudo docker-compose down --remove-orphans
 ```
 
-## 📚 Documentação
+## 🐛 Solução de Problemas
 
-- [Guia de Deploy com RDS](RDS_DEPLOY_README.md) - Documentação completa do deploy
-- [API Documentation](API_DOCUMENTATION.md) - Documentação da API
-
-## 🆘 Suporte
-
-Para problemas:
-
-1. Execute o deploy simplificado: `./deploy-simple.sh`
-2. Verifique os logs: `docker-compose logs`
-3. Teste a conectividade com RDS
-4. Verifique as variáveis de ambiente: `./setup-env.sh`
-5. Execute o script de teste: `./test-backend-build.sh`
-
-## 🧹 Limpeza
-
-Para remover arquivos antigos e desnecessários:
+### Problema: Docker não está instalado
+O script instala automaticamente o Docker. Se houver problemas:
 
 ```bash
-./cleanup-old-files.sh
+sudo apt update
+sudo apt install -y docker.io
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker $USER
+newgrp docker
 ```
+
+### Problema: Containers não iniciam
+```bash
+# Verificar logs
+./deploy-ubuntu-ec2.sh logs
+
+# Reiniciar
+./deploy-ubuntu-ec2.sh restart
+
+# Se não funcionar, fazer deploy novamente
+./deploy-ubuntu-ec2.sh deploy
+```
+
+### Problema: Backend não responde
+```bash
+# Verificar logs do backend
+sudo docker-compose logs backend
+
+# Verificar se o banco está acessível
+sudo docker-compose exec backend npx prisma db push
+```
+
+## 📈 Backup
+
+### Backup automático do banco:
+```bash
+./deploy-ubuntu-ec2.sh backup
+```
+
+Os backups são salvos em `/var/log/nh-personal/backups/`
+
+## 🔄 Atualizações
+
+Para atualizar a aplicação:
+
+```bash
+# Fazer pull das mudanças
+git pull origin main
+
+# Reconstruir e reiniciar
+./deploy-ubuntu-ec2.sh stop
+./deploy-ubuntu-ec2.sh deploy
+```
+
+## 📞 Comandos Úteis
+
+### Acessar container específico:
+```bash
+# Backend
+sudo docker-compose exec backend bash
+
+# MySQL
+sudo docker-compose exec mysql mysql -u root -p
+```
+
+### Ver uso de recursos:
+```bash
+sudo docker stats
+```
+
+### Verificar portas em uso:
+```bash
+sudo netstat -tlnp | grep -E ':(80|443|3000|3001|3306)'
+```
+
+## ⚠️ Importante
+
+- **Sistema**: Use Ubuntu Server para melhor compatibilidade
+- **Security Groups**: Configure as portas necessárias na AWS
+- **Credenciais**: Altere as senhas após o primeiro acesso
+- **Backup**: Configure backup automático para produção
 
 ---
 
-**NH Personal Trainer** - Sistema completo para gerenciamento de personal trainers 
+**NH Personal Trainer** - Sistema completo para gerenciamento de personal trainers
+
+## Sobre
+
+Sistema de gerenciamento completo para personal trainers desenvolvido com Node.js, React, TypeScript e Docker. 
