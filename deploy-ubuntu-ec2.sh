@@ -808,7 +808,7 @@ main() {
             stop_containers
             ;;
         "cleanup")
-            cleanupreact
+            cleanup
             ;;
         "backup")
             backup_database
