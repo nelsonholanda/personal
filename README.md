@@ -49,14 +49,8 @@ Após o deploy bem-sucedido:
 
 ## 👤 Credenciais de Administrador
 
-⚠️ **IMPORTANTE**: As credenciais de administrador são configuradas automaticamente durante o deploy.
-
-```bash
-# Configurar credenciais de administrador (se necessário)
-sudo docker-compose exec backend node scripts/create-admin-user.js
-```
-
-**Nota**: Por segurança, as credenciais não são expostas nos READMEs.
+- **Email**: nholanda@nhpersonal.com
+- **Senha**: P10r1988!
 
 ## 📁 Estrutura do Projeto
 
@@ -213,32 +207,4 @@ sudo netstat -tlnp | grep -E ':(80|443|3000|3001|3306)'
 
 ## Sobre
 
-Sistema de gerenciamento completo para personal trainers desenvolvido com Node.js, React, TypeScript e Docker.
-
-## 📊 Monitoramento
-
-### Verificar se está funcionando:
-```bash
-./deploy-ubuntu-ec2.sh test
-```
-
-### Testar todas as funcionalidades:
-```bash
-./deploy-ubuntu-ec2.sh features
-```
-
-Este comando testa:
-- ✅ Página inicial (Home)
-- ✅ Login de administrador
-- ✅ Gestão de clientes (listar e criar)
-- ✅ Gestão de pagamentos (listar e criar)
-- ✅ Frequência de clientes
-- ✅ Relatórios por período
-- ✅ Relatórios financeiros (recebidos e a receber)
-- ✅ Dashboard
-- ✅ Páginas do frontend (login, clientes, pagamentos, relatórios)
-
-### Ver logs em tempo real:
-```bash
-./deploy-ubuntu-ec2.sh logs
-``` 
+Sistema de gerenciamento completo para personal trainers desenvolvido com Node.js, React, TypeScript e Docker. 
