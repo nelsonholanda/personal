@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import databaseService from '../services/databaseService';
-import { PaymentStatus, AppointmentStatus } from '@prisma/client';
+import { PaymentStatus } from '@prisma/client';
 
 export const dashboardController = {
   // Obter estatísticas do dashboard

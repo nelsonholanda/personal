@@ -24,14 +24,14 @@ RUN cd frontend && npm install
 # Copiar código do backend
 COPY backend/ ./
 
+# Gerar cliente Prisma
+RUN npx prisma generate
+
 # Build do backend
 RUN npm run build
 
 # Copiar código do frontend
 COPY frontend/ ./frontend/
-
-# Gerar cliente Prisma
-RUN npx prisma generate
 
 # Build do frontend
 RUN cd frontend && npm run build
