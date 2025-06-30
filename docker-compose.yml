@@ -1,53 +1,26 @@
 version: '3.8'
 
 services:
-  # Backend API
-  backend:
+  nh-personal-app:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
-    container_name: personal_trainer_backend
-    restart: unless-stopped
+    container_name: nh-personal-app
     ports:
-      - "3001:3001"
+      - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DB_HOST=personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com
-      - DB_PORT=3306
-      - DB_USERNAME=admin
-      - DB_PASSWORD=Rdms95gn!
-      - DB_NAME=personal_trainer_db
-      - JWT_SECRET=nh-personal-jwt-secret-2024
-      - BCRYPT_SALT_ROUNDS=12
-      - LOG_LEVEL=info
-    networks:
-      - personal_trainer_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
-      interval: 60s
-      timeout: 10s
-      retries: 5
-      start_period: 120s
+      - PORT=3000
+      - DATABASE_URL=mysql://admin:Rdms95gn!@personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com:3306/personal_trainer_db
+      - JWT_ACCESS_TOKEN_SECRET=nh-personal-access-token-secret-2024
+      - JWT_REFRESH_TOKEN_SECRET=nh-personal-refresh-token-secret-2024
+      - ENCRYPTION_KEY=nh-personal-encryption-key-2024
     volumes:
-      - /var/log/nh-personal:/opt/nh-personal/logs
-
-  # Frontend React App
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: personal_trainer_frontend
+      - ./logs:/app/logs
     restart: unless-stopped
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend
     networks:
-      - personal_trainer_network
-    environment:
-      - REACT_APP_API_URL=http://localhost:3001/api
-      - NODE_ENV=production
+      - nh-personal-network
 
 networks:
-  personal_trainer_network:
+  nh-personal-network:
     driver: bridge 

@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 // TypeScript interfaces
 interface DashboardStats {
@@ -35,108 +35,123 @@ interface LoginResponse {
   user: User;
 }
 
-class ApiService {
-  private getHeaders(): HeadersInit {
-    const token = localStorage.getItem('token');
-    return {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-    };
-  }
+export const api = {
+  // Configuração base
+  baseURL: API_BASE_URL,
+  
+  // Headers padrão
+  headers: {
+    'Content-Type': 'application/json',
+  },
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  // Função para fazer requisições
+  async request(endpoint: string, options: RequestInit = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
-    const response = await fetch(url, {
+    const token = localStorage.getItem('token');
+    
+    const config: RequestInit = {
       ...options,
-      headers: this.getHeaders(),
-    });
+      headers: {
+        ...this.headers,
+        ...options.headers,
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    };
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    try {
+      const response = await fetch(url, config);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('API request failed:', error);
+      throw error;
     }
+  },
 
-    return response.json();
-  }
+  // Métodos HTTP
+  get: (endpoint: string) => api.request(endpoint),
+  
+  post: (endpoint: string, data: any) => 
+    api.request(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  
+  put: (endpoint: string, data: any) => 
+    api.request(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  
+  delete: (endpoint: string) => 
+    api.request(endpoint, {
+      method: 'DELETE',
+    }),
 
   // Auth endpoints
   async login(email: string, password: string): Promise<LoginResponse> {
-    return this.request<LoginResponse>('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
-  }
+    return api.post('/auth/login', { email, password });
+  },
 
   async getCurrentUser(): Promise<User> {
-    return this.request<User>('/api/auth/me');
-  }
+    return api.get('/auth/me');
+  },
 
   // Dashboard statistics
   async getDashboardStats(): Promise<DashboardStats> {
-    return this.request<DashboardStats>('/api/dashboard/stats');
-  }
+    return api.get('/dashboard/stats');
+  },
 
   // Client management
   async getClients() {
-    return this.request('/api/client-management/clients');
-  }
+    return api.get('/client-management/clients');
+  },
 
   async createClient(clientData: any) {
-    return this.request('/api/client-management/clients', {
-      method: 'POST',
-      body: JSON.stringify(clientData),
-    });
-  }
+    return api.post('/client-management/clients', clientData);
+  },
 
   async updateClient(id: number, clientData: any) {
-    return this.request(`/api/client-management/clients/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(clientData),
-    });
-  }
+    return api.put(`/client-management/clients/${id}`, clientData);
+  },
 
   async deleteClient(id: number) {
-    return this.request(`/api/client-management/clients/${id}`, {
-      method: 'DELETE',
-    });
-  }
+    return api.delete(`/client-management/clients/${id}`);
+  },
 
   // Payments
   async getPayments() {
-    return this.request('/api/payments');
-  }
+    return api.get('/payments');
+  },
 
   async createPayment(paymentData: any) {
-    return this.request('/api/payments', {
-      method: 'POST',
-      body: JSON.stringify(paymentData),
-    });
-  }
+    return api.post('/payments', paymentData);
+  },
 
   async updatePayment(id: number, paymentData: any) {
-    return this.request(`/api/payments/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(paymentData),
-    });
-  }
+    return api.put(`/payments/${id}`, paymentData);
+  },
 
   async deletePayment(id: number) {
-    return this.request(`/api/payments/${id}`, {
-      method: 'DELETE',
-    });
-  }
+    return api.delete(`/payments/${id}`);
+  },
 
   // Recent activity
   async getRecentActivity(): Promise<RecentActivity[]> {
-    const response = await this.request<{ data: RecentActivity[] }>('/api/dashboard/recent-activity');
+    const response = await api.get('/dashboard/recent-activity');
     return response.data || [];
-  }
+  },
 
   // Upcoming sessions
   async getUpcomingSessions(): Promise<UpcomingSession[]> {
-    const response = await this.request<{ data: UpcomingSession[] }>('/api/dashboard/upcoming-sessions');
+    const response = await api.get('/dashboard/upcoming-sessions');
     return response.data || [];
   }
-}
+};
 
-export const apiService = new ApiService(); 
+export default api; 

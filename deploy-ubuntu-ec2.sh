@@ -157,51 +157,21 @@ configure_firewall() {
 setup_environment() {
     log "⚙️ Configurando variáveis de ambiente..."
     
-    # Backend .env
-    cat > backend/.env <<EOF
-ENCRYPTION_KEY=nh-personal-encryption-key-2024
-DB_HOST=personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com
-DB_PORT=3306
-DB_USERNAME=admin
-DB_PASSWORD_ENCRYPTED=f0ab35538ff8e4e7825363b2b5a348dc:654375d1c2216dc33d8c917db2ddc501
-DB_NAME=personal_trainer_db
-NODE_ENV=production
-PORT=3001
-JWT_ACCESS_TOKEN_SECRET=nh-personal-access-token-secret-2024
-JWT_REFRESH_TOKEN_SECRET=nh-personal-refresh-token-secret-2024
-AWS_REGION=us-east-2
-AWS_SECRET_NAME=rds!db-da675fb5-6491-4bf4-981a-2fa9d6d5b811
-RDS_HOSTNAME=personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com
-RDS_PORT=3306
-RDS_USERNAME=admin
-RDS_PASSWORD=$DB_PASSWORD
-RDS_DATABASE=personal_trainer_db
-EOF
-
-    # Frontend .env
-    cat > frontend/.env <<EOF
-REACT_APP_API_URL=http://localhost:3001/api
-NODE_ENV=production
-EOF
-
     # .env principal
     cat > .env <<EOF
 # Database Configuration
-MYSQL_ROOT_PASSWORD=nh-personal-root-2024
-MYSQL_DATABASE=personal_trainer_db
-MYSQL_USER=admin
-MYSQL_PASSWORD=nh-personal-password-2024
+DATABASE_URL=mysql://admin:Rdms95gn!@personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com:3306/personal_trainer_db
 
-# AWS Configuration
-AWS_REGION=us-east-2
-AWS_SECRET_NAME=rds!db-da675fb5-6491-4bf4-981a-2fa9d6d5b811
+# JWT Configuration
+JWT_ACCESS_TOKEN_SECRET=nh-personal-access-token-secret-2024
+JWT_REFRESH_TOKEN_SECRET=nh-personal-refresh-token-secret-2024
 
-# RDS Configuration (fallback)
-RDS_HOST=personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com
-RDS_PORT=3306
-RDS_USERNAME=admin
-RDS_PASSWORD=nh-personal-password-2024
-RDS_DATABASE=personal_trainer_db
+# Encryption
+ENCRYPTION_KEY=nh-personal-encryption-key-2024
+
+# Application Configuration
+NODE_ENV=production
+PORT=3000
 EOF
 
     success "Variáveis de ambiente configuradas"
@@ -242,11 +212,157 @@ initialize_database() {
     
     success "Migrações executadas com sucesso"
     
-    # Criar usuário administrador
-    log "👤 Criando usuário administrador 'nholanda'..."
-    node scripts/create-admin-user.js
+    # Perguntar ao usuário se quer criar o admin manualmente
+    echo ""
+    echo "👤 Criação do Usuário Administrador"
+    echo "=================================="
+    echo "1. Criar usuário admin automaticamente (nholanda/P10r1988!)"
+    echo "2. Criar usuário admin manualmente"
+    echo ""
+    read -p "Escolha uma opção (1 ou 2): " ADMIN_CHOICE
     
-    success "Usuário administrador criado com sucesso"
+    case $ADMIN_CHOICE in
+        1)
+            log "👤 Criando usuário admin padrão 'nholanda'..."
+            node scripts/create-admin-user.js
+            ;;
+        2)
+            echo ""
+            echo "🔧 Configuração Manual do Usuário Admin"
+            echo "======================================"
+            
+            # Solicitar nome de usuário
+            while true; do
+                read -p "Digite o nome de usuário do admin: " ADMIN_USERNAME
+                if [ -n "$ADMIN_USERNAME" ]; then
+                    break
+                else
+                    echo "❌ Nome de usuário não pode estar vazio"
+                fi
+            done
+            
+            # Solicitar senha
+            while true; do
+                read -s -p "Digite a senha do admin: " ADMIN_PASSWORD
+                echo ""
+                if [ -n "$ADMIN_PASSWORD" ]; then
+                    read -s -p "Confirme a senha: " ADMIN_PASSWORD_CONFIRM
+                    echo ""
+                    if [ "$ADMIN_PASSWORD" = "$ADMIN_PASSWORD_CONFIRM" ]; then
+                        break
+                    else
+                        echo "❌ Senhas não coincidem"
+                    fi
+                else
+                    echo "❌ Senha não pode estar vazia"
+                fi
+            done
+            
+            # Criar arquivo temporário com as credenciais
+            cat > temp-admin-config.js <<EOF
+const bcrypt = require('bcryptjs');
+const { PrismaClient } = require('@prisma/client');
+
+const databaseURL = 'mysql://admin:Rdms95gn!@personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com:3306/personal_trainer_db';
+process.env.DATABASE_URL = databaseURL;
+
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: databaseURL,
+    },
+  },
+});
+
+async function createCustomAdminUser() {
+  try {
+    console.log('🔐 Conectando ao banco de dados...');
+    await prisma.\$connect();
+
+    // Apagar todos os usuários que não são admin
+    await prisma.user.deleteMany({ where: { role: { not: 'admin' } } });
+
+    // Verificar se o usuário admin já existe
+    let adminUser = await prisma.user.findFirst({ where: { name: '$ADMIN_USERNAME', role: 'admin' } });
+
+    if (adminUser) {
+      // Atualizar senha
+      const hashedPassword = await bcrypt.hash('$ADMIN_PASSWORD', 12);
+      await prisma.user.update({
+        where: { id: adminUser.id },
+        data: {
+          passwordHash: hashedPassword,
+          isActive: true,
+          updatedAt: new Date(),
+        },
+      });
+      console.log('✅ Usuário admin "$ADMIN_USERNAME" atualizado com sucesso!');
+    } else {
+      // Criar usuário admin
+      const hashedPassword = await bcrypt.hash('$ADMIN_PASSWORD', 12);
+      adminUser = await prisma.user.create({
+        data: {
+          name: '$ADMIN_USERNAME',
+          passwordHash: hashedPassword,
+          role: 'admin',
+          isActive: true,
+          passwordChangedAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+      console.log('✅ Usuário admin "$ADMIN_USERNAME" criado com sucesso!');
+    }
+
+    // Criar perfil de treinador para o admin se não existir
+    const existingTrainerProfile = await prisma.trainerProfile.findUnique({ where: { userId: adminUser.id } });
+    if (!existingTrainerProfile) {
+      await prisma.trainerProfile.create({
+        data: {
+          userId: adminUser.id,
+          specialization: 'Personal Trainer, Treinamento Funcional, Musculação',
+          experienceYears: 15,
+          certifications: 'CREF, Especialização em Treinamento Funcional, Certificação em Nutrição Esportiva',
+          bio: 'Administrador e Personal Trainer do sistema.',
+          hourlyRate: 150.00,
+          availability: JSON.stringify({}),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+      console.log('✅ Perfil de treinador para admin criado com sucesso!');
+    }
+
+    console.log('🎉 Configuração do admin concluída!');
+    console.log('=====================================');
+    console.log('👤 Usuário: $ADMIN_USERNAME (admin)');
+    console.log('💡 Use essas credenciais para acessar o sistema!');
+  } catch (error) {
+    console.error('❌ Erro ao criar usuário administrador:', error);
+  } finally {
+    await prisma.\$disconnect();
+  }
+}
+
+createCustomAdminUser();
+EOF
+
+            log "👤 Criando usuário admin personalizado '$ADMIN_USERNAME'..."
+            node temp-admin-config.js
+            
+            # Salvar credenciais para uso posterior
+            echo "$ADMIN_USERNAME" > .admin_username
+            echo "$ADMIN_PASSWORD" > .admin_password
+            
+            # Limpar arquivo temporário
+            rm temp-admin-config.js
+            
+            success "Usuário admin personalizado criado com sucesso"
+            ;;
+        *)
+            error "Opção inválida"
+            ;;
+    esac
     
     cd ..
     
@@ -350,23 +466,23 @@ deploy_application() {
     sudo docker system prune -f
     
     # Construir e iniciar containers
-    log "🐳 Construindo e iniciando containers..."
+    log "🐳 Construindo e iniciando container único..."
     sudo docker-compose up --build -d
     
-    success "Containers iniciados"
+    success "Container iniciado"
     
-    # Aguardar serviços estarem prontos
-    log "⏳ Aguardando serviços estarem prontos..."
+    # Aguardar serviço estar pronto
+    log "⏳ Aguardando serviço estar pronto..."
     sleep 30
     
-    # Verificar se o backend está respondendo
-    log "🔍 Verificando se o backend está respondendo..."
+    # Verificar se a aplicação está respondendo
+    log "🔍 Verificando se a aplicação está respondendo..."
     for i in {1..10}; do
-        if curl -f http://localhost:3001/health > /dev/null 2>&1; then
-            success "Backend está respondendo"
+        if curl -f http://localhost:3000/health > /dev/null 2>&1; then
+            success "Aplicação está respondendo"
             break
         else
-            warning "Tentativa $i: Backend ainda não está respondendo..."
+            warning "Tentativa $i: Aplicação ainda não está respondendo..."
             sleep 10
         fi
     done
@@ -389,21 +505,35 @@ show_deploy_info() {
         PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "localhost")
     fi
     
+    # Obter credenciais do admin
+    if [ -f ".admin_username" ] && [ -f ".admin_password" ]; then
+        ADMIN_USERNAME=$(cat .admin_username)
+        ADMIN_PASSWORD=$(cat .admin_password)
+    else
+        ADMIN_USERNAME="nholanda"
+        ADMIN_PASSWORD="P10r1988!"
+    fi
+    
     echo ""
     echo "🎉 DEPLOY CONCLUÍDO COM SUCESSO!"
     echo "=================================="
-    echo "🌐 URLs da aplicação:"
-    echo "   Frontend: http://$PUBLIC_IP:3000"
-    echo "   Backend:  http://$PUBLIC_IP:3001"
-    echo "   Health Check: http://$PUBLIC_IP:3001/health"
+    echo "🌐 URL da aplicação:"
+    echo "   Aplicação: http://$PUBLIC_IP:3000"
+    echo "   Health Check: http://$PUBLIC_IP:3000/health"
+    echo "   API: http://$PUBLIC_IP:3000/api"
     echo ""
     echo "👤 Credenciais de Administrador:"
-    echo "   Usuário: nholanda"
-    echo "   Senha: P10r1988!"
+    echo "   Usuário: $ADMIN_USERNAME"
+    echo "   Senha: $ADMIN_PASSWORD"
+    echo ""
+    echo "🔐 Acesso à área administrativa:"
+    echo "   URL: http://$PUBLIC_IP:3000/admin"
+    echo "   Use as credenciais acima para fazer login"
     echo ""
     echo "✅ Banco de dados inicializado automaticamente"
     echo "✅ Usuário admin criado automaticamente"
     echo "✅ IP público configurado automaticamente"
+    echo "✅ Container único configurado"
     echo ""
     echo "🔧 Comandos úteis:"
     echo "   Status: $0 status"
