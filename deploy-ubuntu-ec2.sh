@@ -197,6 +197,42 @@ check_docker_compose() {
         exit 1
     fi
     
+    # CORREÇÃO: Criar arquivos .env se não existirem antes da validação
+    if [ ! -f "backend/.env" ] || [ ! -f "frontend/.env" ]; then
+        log "🔧 Criando arquivos .env necessários para validação..."
+        
+        # Usar IP padrão para validação se não estiver configurado
+        SERVER_IP="localhost"
+        if [ -f ".ec2_ip" ]; then
+            SERVER_IP=$(cat .ec2_ip)
+        fi
+        
+        # Criar backend/.env se não existir
+        if [ ! -f "backend/.env" ]; then
+            cat > backend/.env <<EOF
+# NH-Personal Backend Environment Variables
+NODE_ENV=production
+PORT=3000
+DATABASE_URL=mysql://admin:Rdms95gn!@personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com:3306/personal_trainer_db
+JWT_ACCESS_TOKEN_SECRET=nh-personal-access-token-secret-2024
+JWT_REFRESH_TOKEN_SECRET=nh-personal-refresh-token-secret-2024
+ENCRYPTION_KEY=nh-personal-encryption-key-2024
+FRONTEND_URL=http://$SERVER_IP:3000
+EOF
+        fi
+        
+        # Criar frontend/.env se não existir
+        if [ ! -f "frontend/.env" ]; then
+            cat > frontend/.env <<EOF
+# NH-Personal Frontend Environment Variables
+REACT_APP_API_URL=http://$SERVER_IP:3000/api
+REACT_APP_ENV=production
+EOF
+        fi
+        
+        log "✅ Arquivos .env criados para validação"
+    fi
+    
     # Testar se o docker compose consegue validar o arquivo
     if ! sudo docker compose config > /dev/null 2>&1; then
         error "Erro na configuração do docker-compose.yml. Verifique a sintaxe."
@@ -327,112 +363,13 @@ deploy_application() {
     # CORREÇÃO AUTOMÁTICA: Criar arquivos .env se não existirem
     log "🔧 Verificando e criando arquivos .env necessários..."
     
-    # Criar backend/.env se não existir
-    if [ ! -f "backend/.env" ]; then
-        log "📝 Criando backend/.env..."
-        cat > backend/.env <<EOF
-# NH-Personal Backend Environment Variables
-# Configurações para produção
-
-# Server Configuration
-NODE_ENV=production
-PORT=3000
-
-# Database Configuration
-DATABASE_URL=mysql://admin:Rdms95gn!@personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com:3306/personal_trainer_db
-RDS_HOST=personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com
-RDS_PORT=3306
-RDS_USERNAME=admin
-RDS_PASSWORD=Rdms95gn!
-RDS_DATABASE=personal_trainer_db
-
-# JWT Configuration
-JWT_ACCESS_TOKEN_SECRET=nh-personal-access-token-secret-2024
-JWT_REFRESH_TOKEN_SECRET=nh-personal-refresh-token-secret-2024
-JWT_ACCESS_TOKEN_EXPIRES_IN=15m
-JWT_REFRESH_TOKEN_EXPIRES_IN=7d
-
-# Security Configuration
-BCRYPT_SALT_ROUNDS=12
-PASSWORD_MIN_LENGTH=8
-PASSWORD_MAX_HISTORY=5
-PASSWORD_RESET_TOKEN_EXPIRES_IN=3600000
-ENCRYPTION_KEY=nh-personal-encryption-key-2024
-
-# Rate Limiting
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
-
-# Production Configuration
-ENABLE_COMPRESSION=true
-ENABLE_HELMET=true
-ENABLE_RATE_LIMIT=true
-
-# Logging Configuration
-LOG_LEVEL=info
-LOG_FILE_PATH=/var/log/nh-personal
-
-# Email Configuration (opcional)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=seu-email@gmail.com
-SMTP_PASS=sua-senha-app
-SMTP_FROM=noreply@nhpersonal.com
-
-# File Upload Configuration
-UPLOAD_MAX_SIZE=10485760
-UPLOAD_ALLOWED_TYPES=image/jpeg,image/png,image/gif
-UPLOAD_PATH=/var/log/nh-personal/uploads
-
-# Monitoring Configuration
-ENABLE_HEALTH_CHECK=true
-HEALTH_CHECK_INTERVAL=30000
-
-# CORS Configuration
-ENABLE_CORS=true
-CORS_ORIGIN=http://$SERVER_IP:3000
-
-# Frontend URL (atualizado com IP do servidor)
-FRONTEND_URL=http://$SERVER_IP:3000
-BACKEND_URL=http://$SERVER_IP:3000/api
-EOF
-        success "✅ backend/.env criado"
+    # Os arquivos .env já foram criados na função check_docker_compose
+    # Aqui apenas atualizamos com o IP correto se necessário
+    if [ -f "backend/.env" ] && [ -f "frontend/.env" ]; then
+        log "✅ Arquivos .env já existem"
     else
-        log "✅ backend/.env já existe"
-    fi
-
-    # Criar frontend/.env se não existir
-    if [ ! -f "frontend/.env" ]; then
-        log "📝 Criando frontend/.env..."
-        cat > frontend/.env <<EOF
-# NH-Personal Frontend Environment Variables
-# Configurações para produção
-
-# React App Configuration
-REACT_APP_API_URL=http://$SERVER_IP:3000/api
-REACT_APP_ENV=production
-
-# Google Analytics (opcional)
-REACT_APP_GA_TRACKING_ID=
-
-# Sentry (opcional)
-REACT_APP_SENTRY_DSN=
-
-# Build Configuration
-GENERATE_SOURCEMAP=false
-INLINE_RUNTIME_CHUNK=false
-
-# Performance Configuration
-REACT_APP_ENABLE_ANALYTICS=false
-REACT_APP_ENABLE_ERROR_TRACKING=false
-
-# API Configuration
-REACT_APP_BACKEND_URL=http://$SERVER_IP:3000/api
-REACT_APP_FRONTEND_URL=http://$SERVER_IP:3000
-EOF
-        success "✅ frontend/.env criado"
-    else
-        log "✅ frontend/.env já existe"
+        error "❌ Arquivos .env não foram criados corretamente"
+        exit 1
     fi
     
     # CORREÇÃO AUTOMÁTICA: Fazer build do backend antes do deploy
