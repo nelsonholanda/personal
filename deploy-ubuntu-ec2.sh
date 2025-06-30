@@ -1,4 +1,4 @@
-#!/bin/bash
+n#!/bin/bash
 
 # =============================================================================
 # NH GESTÃO DE ALUNOS - SCRIPT DE DEPLOY UBUNTU EC2
@@ -375,7 +375,25 @@ deploy_application() {
     # CORREÇÃO AUTOMÁTICA: Fazer build do backend antes do deploy
     log "🔨 Fazendo build do backend..."
     if [ -f "backend/package.json" ]; then
+        # Verificar se Node.js está instalado
+        if ! command -v node &> /dev/null; then
+            log "📦 Node.js não encontrado, instalando..."
+            install_nodejs
+        elif ! command -v npm &> /dev/null; then
+            log "📦 npm não encontrado, instalando Node.js..."
+            install_nodejs
+        fi
+        
         cd backend
+        
+        # Instalar dependências se node_modules não existir
+        if [ ! -d "node_modules" ]; then
+            log "📦 Instalando dependências do backend..."
+            npm install
+        fi
+        
+        # Fazer build
+        log "🔨 Compilando TypeScript..."
         npm run build
         cd ..
         success "✅ Build do backend concluído"
@@ -651,6 +669,36 @@ backup_database() {
     fi
 }
 
+# Função para instalar Node.js
+install_nodejs() {
+    log "📦 Verificando Node.js..."
+    
+    if command -v node &> /dev/null && command -v npm &> /dev/null; then
+        log "✅ Node.js já está instalado"
+        echo "   Versão Node.js: $(node --version)"
+        echo "   Versão npm: $(npm --version)"
+        return
+    fi
+    
+    log "📦 Instalando Node.js..."
+    
+    # Adicionar repositório NodeSource
+    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    
+    # Instalar Node.js
+    sudo apt install -y nodejs
+    
+    # Verificar instalação
+    if command -v node &> /dev/null && command -v npm &> /dev/null; then
+        success "✅ Node.js instalado com sucesso"
+        echo "   Versão Node.js: $(node --version)"
+        echo "   Versão npm: $(npm --version)"
+    else
+        error "❌ Falha na instalação do Node.js"
+        exit 1
+    fi
+}
+
 # Função principal
 main() {
     # Verificar argumentos
@@ -663,6 +711,7 @@ main() {
         "deploy")
             check_ubuntu
             install_dependencies
+            install_nodejs
             install_docker
             install_docker_compose
             configure_firewall
