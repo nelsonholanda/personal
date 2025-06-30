@@ -76,12 +76,24 @@ const ClientManagement: React.FC = () => {
     }
   };
 
-  // Handle bulk status update
-  const handleBulkStatusUpdate = (status: string) => {
-    if (selectedClients.length === 0) return;
-    
-    bulkStatusMutation.mutate({ clientIds: selectedClients, status });
-  };
+  // Bulk actions mutations
+  const bulkStatusMutation = useMutation(
+    async ({ clientIds, status }: { clientIds: number[]; status: string }) => {
+      await Promise.all(
+        clientIds.map(id => axios.put(`/api/client-management/${id}`, { status }))
+      );
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('clients');
+        setSelectedClients([]);
+        toast.success('Clientes atualizados com sucesso!');
+      },
+      onError: () => {
+        toast.error('Erro ao atualizar clientes');
+      }
+    }
+  );
 
   // Get status badge
   const getStatusBadge = (status: string) => {
@@ -185,13 +197,13 @@ const ClientManagement: React.FC = () => {
               </p>
               <div className="flex gap-2">
                 <button
-                  onClick={() => handleBulkStatusUpdate('active')}
+                  onClick={() => bulkStatusMutation.mutate({ clientIds: selectedClients, status: 'active' })}
                   className="btn btn-success btn-sm"
                 >
                   Marcar como Ativo
                 </button>
                 <button
-                  onClick={() => handleBulkStatusUpdate('inactive')}
+                  onClick={() => bulkStatusMutation.mutate({ clientIds: selectedClients, status: 'inactive' })}
                   className="btn btn-warning btn-sm"
                 >
                   Marcar como Inativo
