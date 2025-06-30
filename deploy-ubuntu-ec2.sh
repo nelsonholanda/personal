@@ -66,7 +66,8 @@ show_help() {
     echo "Uso: $0 [OPÇÃO]"
     echo ""
     echo "Opções:"
-    echo "  deploy     - Fazer deploy completo da aplicação"
+    echo "  deploy     - Fazer deploy completo da aplicação (IP será solicitado automaticamente)"
+    echo "  config-ip  - Configurar IP do servidor manualmente"
     echo "  diagnose   - Executar diagnóstico completo"
     echo "  test       - Executar teste rápido"
     echo "  features   - Testar funcionalidades da aplicação"
@@ -79,11 +80,15 @@ show_help() {
     echo "  help       - Mostrar esta ajuda"
     echo ""
     echo "Exemplos:"
-    echo "  $0 deploy     # Fazer deploy completo"
+    echo "  $0 deploy     # Fazer deploy completo (IP será solicitado)"
+    echo "  $0 config-ip  # Configurar IP do servidor manualmente"
     echo "  $0 diagnose   # Verificar status da aplicação"
     echo "  $0 test       # Teste rápido"
     echo "  $0 features   # Testar funcionalidades da aplicação"
     echo "  $0 logs       # Ver logs em tempo real"
+    echo ""
+    echo "📝 Nota: Durante o deploy, o script solicitará automaticamente o IP público da EC2."
+    echo "   Você pode configurar o IP antecipadamente usando: $0 config-ip"
     echo ""
 }
 
@@ -204,9 +209,69 @@ configure_firewall() {
     success "Firewall configurado"
 }
 
+# Função para solicitar IP do servidor durante o deploy
+prompt_server_ip() {
+    echo ""
+    echo "🌐 CONFIGURAÇÃO DO IP PÚBLICO DA EC2"
+    echo "===================================="
+    echo ""
+    echo "Para que a aplicação funcione corretamente, precisamos do IP público da sua instância EC2."
+    echo ""
+    echo "📋 Como encontrar o IP público:"
+    echo "   1. Acesse o AWS Console"
+    echo "   2. Vá para EC2 > Instâncias"
+    echo "   3. Selecione sua instância"
+    echo "   4. Copie o 'IPv4 público'"
+    echo ""
+    
+    while true; do
+        read -p "🔗 Digite o IP público da sua instância EC2: " SERVER_IP
+        
+        if [ -z "$SERVER_IP" ]; then
+            error "❌ IP não pode estar vazio. Tente novamente."
+            continue
+        fi
+        
+        # Validar formato do IP
+        if [[ $SERVER_IP =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+            # Validar se cada octeto está entre 0-255
+            IFS='.' read -ra OCTETS <<< "$SERVER_IP"
+            VALID_IP=true
+            for octet in "${OCTETS[@]}"; do
+                if [ "$octet" -lt 0 ] || [ "$octet" -gt 255 ]; then
+                    VALID_IP=false
+                    break
+                fi
+            done
+            
+            if [ "$VALID_IP" = true ]; then
+                success "✅ IP válido: $SERVER_IP"
+                echo "$SERVER_IP" > .ec2_ip
+                break
+            else
+                error "❌ IP inválido. Cada número deve estar entre 0 e 255."
+            fi
+        else
+            error "❌ Formato de IP inválido. Use o formato: xxx.xxx.xxx.xxx"
+        fi
+    done
+    
+    echo ""
+    echo "🔧 Configurando variáveis de ambiente com IP: $SERVER_IP"
+    echo ""
+}
+
 # Função para configurar variáveis de ambiente
 setup_environment() {
     log "⚙️ Configurando variáveis de ambiente..."
+    
+    # Ler IP do servidor configurado
+    if [ -f ".ec2_ip" ]; then
+        SERVER_IP=$(cat .ec2_ip)
+    else
+        error "❌ IP do servidor não configurado. Execute a configuração do IP primeiro."
+        exit 1
+    fi
     
     # .env principal
     cat > .env <<EOF
@@ -223,8 +288,8 @@ ENCRYPTION_KEY=nh-personal-encryption-key-2024
 # Application Configuration
 NODE_ENV=production
 PORT=3000
-FRONTEND_URL=http://localhost:3000
-BACKEND_URL=http://localhost:3000/api
+FRONTEND_URL=http://$SERVER_IP:3000
+BACKEND_URL=http://$SERVER_IP:3000/api
 
 # Email Configuration (se necessário)
 SMTP_HOST=smtp.gmail.com
@@ -238,7 +303,103 @@ AWS_ACCESS_KEY_ID=sua-access-key
 AWS_SECRET_ACCESS_KEY=sua-secret-key
 EOF
 
-    success "Variáveis de ambiente configuradas"
+    # .env do backend
+    cat > backend/.env <<EOF
+# NH-Personal Backend Environment Variables
+# Configurações para produção
+
+# Server Configuration
+NODE_ENV=production
+PORT=3000
+
+# Database Configuration
+DATABASE_URL=mysql://admin:Rdms95gn!@personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com:3306/personal_trainer_db
+RDS_HOST=personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com
+RDS_PORT=3306
+RDS_USERNAME=admin
+RDS_PASSWORD=Rdms95gn!
+RDS_DATABASE=personal_trainer_db
+
+# JWT Configuration
+JWT_ACCESS_TOKEN_SECRET=nh-personal-access-token-secret-2024
+JWT_REFRESH_TOKEN_SECRET=nh-personal-refresh-token-secret-2024
+JWT_ACCESS_TOKEN_EXPIRES_IN=15m
+JWT_REFRESH_TOKEN_EXPIRES_IN=7d
+
+# Security Configuration
+BCRYPT_SALT_ROUNDS=12
+PASSWORD_MIN_LENGTH=8
+PASSWORD_MAX_HISTORY=5
+PASSWORD_RESET_TOKEN_EXPIRES_IN=3600000
+ENCRYPTION_KEY=nh-personal-encryption-key-2024
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+
+# Production Configuration
+ENABLE_COMPRESSION=true
+ENABLE_HELMET=true
+ENABLE_RATE_LIMIT=true
+
+# Logging Configuration
+LOG_LEVEL=info
+LOG_FILE_PATH=/var/log/nh-personal
+
+# Email Configuration (opcional)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=seu-email@gmail.com
+SMTP_PASS=sua-senha-app
+SMTP_FROM=noreply@nhpersonal.com
+
+# File Upload Configuration
+UPLOAD_MAX_SIZE=10485760
+UPLOAD_ALLOWED_TYPES=image/jpeg,image/png,image/gif
+UPLOAD_PATH=/var/log/nh-personal/uploads
+
+# Monitoring Configuration
+ENABLE_HEALTH_CHECK=true
+HEALTH_CHECK_INTERVAL=30000
+
+# CORS Configuration
+ENABLE_CORS=true
+CORS_ORIGIN=http://$SERVER_IP:3000
+
+# Frontend URL (atualizado com IP do servidor)
+FRONTEND_URL=http://$SERVER_IP:3000
+BACKEND_URL=http://$SERVER_IP:3000/api
+EOF
+
+    # .env do frontend
+    cat > frontend/.env <<EOF
+# NH-Personal Frontend Environment Variables
+# Configurações para produção
+
+# React App Configuration
+REACT_APP_API_URL=http://$SERVER_IP:3000/api
+REACT_APP_ENV=production
+
+# Google Analytics (opcional)
+REACT_APP_GA_TRACKING_ID=
+
+# Sentry (opcional)
+REACT_APP_SENTRY_DSN=
+
+# Build Configuration
+GENERATE_SOURCEMAP=false
+INLINE_RUNTIME_CHUNK=false
+
+# Performance Configuration
+REACT_APP_ENABLE_ANALYTICS=false
+REACT_APP_ENABLE_ERROR_TRACKING=false
+
+# API Configuration
+REACT_APP_BACKEND_URL=http://$SERVER_IP:3000/api
+REACT_APP_FRONTEND_URL=http://$SERVER_IP:3000
+EOF
+
+    success "Variáveis de ambiente configuradas com IP: $SERVER_IP"
 }
 
 # Função para fazer deploy da aplicação
@@ -250,6 +411,25 @@ deploy_application() {
         error "Arquivo docker-compose.yml não encontrado. Execute este script no diretório raiz do projeto."
         exit 1
     fi
+    
+    # Verificar se o IP já está configurado
+    if [ ! -f ".ec2_ip" ]; then
+        log "📝 IP do servidor não configurado. Solicitando..."
+        prompt_server_ip
+    else
+        SERVER_IP=$(cat .ec2_ip)
+        log "✅ IP do servidor já configurado: $SERVER_IP"
+        
+        # Perguntar se quer alterar o IP
+        read -p "🔄 Deseja alterar o IP atual ($SERVER_IP)? (s/N): " CHANGE_IP
+        if [[ $CHANGE_IP =~ ^[Ss]$ ]]; then
+            prompt_server_ip
+        fi
+    fi
+    
+    # Configurar variáveis de ambiente com o IP atual
+    SERVER_IP=$(cat .ec2_ip)
+    setup_environment
     
     # Verificar se o Docker está rodando
     if ! sudo systemctl is-active --quiet docker; then
@@ -291,14 +471,11 @@ deploy_application() {
             warning "⚠️ Health check falhou, mas containers estão rodando"
         fi
         
-        # Obter IP público
-        PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || curl -s ifconfig.me 2>/dev/null || echo "localhost")
-        
         echo ""
         echo "🌐 URLs da aplicação:"
-        echo "   • Frontend: http://$PUBLIC_IP:3000"
-        echo "   • Health Check: http://$PUBLIC_IP:3000/health"
-        echo "   • API: http://$PUBLIC_IP:3000/api"
+        echo "   • Frontend: http://$SERVER_IP:3000"
+        echo "   • Health Check: http://$SERVER_IP:3000/health"
+        echo "   • API: http://$SERVER_IP:3000/api"
         echo ""
         echo "🔐 Melhorias de segurança implementadas:"
         echo "   • Criptografia AES-256-CBC ativa"
@@ -308,9 +485,6 @@ deploy_application() {
         echo "📊 Para verificar o status: $0 status"
         echo "📋 Para ver os logs: $0 logs"
         echo "🧪 Para testar: $0 test"
-        
-        # Salvar IP para uso posterior
-        echo "$PUBLIC_IP" > .ec2_ip
         
     else
         error "❌ Falha no deploy. Verifique os logs: $0 logs"
@@ -532,9 +706,11 @@ main() {
             install_docker
             install_docker_compose
             configure_firewall
-            setup_environment
             check_docker_compose
             deploy_application
+            ;;
+        "config-ip")
+            prompt_server_ip
             ;;
         "diagnose")
             diagnose

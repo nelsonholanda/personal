@@ -21,6 +21,9 @@ COPY frontend/package*.json ./frontend/
 # Instalar dependências do frontend
 RUN cd frontend && npm install
 
+# Copiar arquivos .env do backend
+COPY backend/.env ./
+
 # Copiar código do backend
 COPY backend/ ./
 
@@ -29,6 +32,9 @@ RUN npx prisma generate
 
 # Build do backend
 RUN npm run build
+
+# Copiar arquivos .env do frontend
+COPY frontend/.env ./frontend/
 
 # Copiar código do frontend
 COPY frontend/ ./frontend/
