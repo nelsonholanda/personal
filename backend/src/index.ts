@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -90,8 +91,20 @@ app.use('/api/payments', authMiddleware, paymentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Error handling middleware
-app.use(notFound);
+// Serve static files from the React app build
+const frontendBuildPath = path.join(__dirname, '../frontend/build');
+if (process.env.NODE_ENV === 'production') {
+  // Serve static files from the React app build
+  app.use(express.static(frontendBuildPath));
+  
+  // Handle React routing, return all requests to React app
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendBuildPath, 'index.html'));
+  });
+}
+
+// Error handling middleware (apenas para rotas da API)
+app.use('/api/*', notFound);
 app.use(errorHandler);
 
 // Graceful shutdown

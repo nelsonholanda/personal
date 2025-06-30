@@ -63,11 +63,20 @@ show_help() {
     echo "🚀 Script de Deploy para Ubuntu EC2 - NH Gestão de Alunos"
     echo "========================================================"
     echo ""
+    echo "⚠️  PRÉ-REQUISITO OBRIGATÓRIO:"
+    echo "   Você DEVE configurar o IP público da EC2 ANTES de fazer o deploy."
+    echo ""
+    echo "📋 Como encontrar o IP público:"
+    echo "   1. Acesse o AWS Console"
+    echo "   2. Vá para EC2 > Instâncias"
+    echo "   3. Selecione sua instância"
+    echo "   4. Copie o 'IPv4 público'"
+    echo ""
     echo "Uso: $0 [OPÇÃO]"
     echo ""
     echo "Opções:"
-    echo "  deploy     - Fazer deploy completo da aplicação (IP será solicitado automaticamente)"
-    echo "  config-ip  - Configurar IP do servidor manualmente"
+    echo "  config-ip  - ⚠️  OBRIGATÓRIO: Configurar IP do servidor manualmente"
+    echo "  deploy     - Fazer deploy completo da aplicação (requer IP configurado)"
     echo "  diagnose   - Executar diagnóstico completo"
     echo "  test       - Executar teste rápido"
     echo "  features   - Testar funcionalidades da aplicação"
@@ -79,16 +88,28 @@ show_help() {
     echo "  backup     - Fazer backup do banco de dados"
     echo "  help       - Mostrar esta ajuda"
     echo ""
+    echo "📝 FLUXO CORRETO DE DEPLOY:"
+    echo "   1. $0 config-ip     # Configurar IP público da EC2"
+    echo "   2. $0 deploy        # Fazer deploy completo"
+    echo "   3. $0 test          # Testar aplicação"
+    echo ""
     echo "Exemplos:"
-    echo "  $0 deploy     # Fazer deploy completo (IP será solicitado)"
-    echo "  $0 config-ip  # Configurar IP do servidor manualmente"
+    echo "  $0 config-ip  # ⚠️  PRIMEIRO: Configurar IP do servidor"
+    echo "  $0 deploy     # SEGUNDO: Fazer deploy completo"
     echo "  $0 diagnose   # Verificar status da aplicação"
     echo "  $0 test       # Teste rápido"
     echo "  $0 features   # Testar funcionalidades da aplicação"
     echo "  $0 logs       # Ver logs em tempo real"
     echo ""
-    echo "📝 Nota: Durante o deploy, o script solicitará automaticamente o IP público da EC2."
-    echo "   Você pode configurar o IP antecipadamente usando: $0 config-ip"
+    echo "🔧 CORREÇÕES AUTOMÁTICAS INCLUÍDAS:"
+    echo "   • Criação automática de arquivos .env"
+    echo "   • Build automático do backend"
+    echo "   • Configuração automática de CORS"
+    echo "   • Servir frontend estático"
+    echo ""
+    echo "📊 Para verificar o status: $0 status"
+    echo "📋 Para ver os logs: $0 logs"
+    echo "🧪 Para testar: $0 test"
     echo ""
 }
 
@@ -261,50 +282,55 @@ prompt_server_ip() {
     echo ""
 }
 
-# Função para configurar variáveis de ambiente
-setup_environment() {
-    log "⚙️ Configurando variáveis de ambiente..."
+# Função para fazer deploy da aplicação
+deploy_application() {
+    log "🚀 Fazendo deploy da aplicação..."
     
-    # Ler IP do servidor configurado
-    if [ -f ".ec2_ip" ]; then
-        SERVER_IP=$(cat .ec2_ip)
-    else
-        error "❌ IP do servidor não configurado. Execute a configuração do IP primeiro."
+    # Verificar se estamos no diretório correto
+    if [ ! -f "docker-compose.yml" ]; then
+        error "Arquivo docker-compose.yml não encontrado. Execute este script no diretório raiz do projeto."
         exit 1
     fi
     
-    # .env principal
-    cat > .env <<EOF
-# Database Configuration
-DATABASE_URL=mysql://admin:Rdms95gn!@personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com:3306/personal_trainer_db
-
-# JWT Configuration
-JWT_ACCESS_TOKEN_SECRET=nh-personal-access-token-secret-2024
-JWT_REFRESH_TOKEN_SECRET=nh-personal-refresh-token-secret-2024
-
-# Encryption
-ENCRYPTION_KEY=nh-personal-encryption-key-2024
-
-# Application Configuration
-NODE_ENV=production
-PORT=3000
-FRONTEND_URL=http://$SERVER_IP:3000
-BACKEND_URL=http://$SERVER_IP:3000/api
-
-# Email Configuration (se necessário)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=seu-email@gmail.com
-SMTP_PASS=sua-senha-app
-
-# AWS Configuration
-AWS_REGION=us-east-2
-AWS_ACCESS_KEY_ID=sua-access-key
-AWS_SECRET_ACCESS_KEY=sua-secret-key
-EOF
-
-    # .env do backend
-    cat > backend/.env <<EOF
+    # VERIFICAÇÃO OBRIGATÓRIA DO IP
+    if [ ! -f ".ec2_ip" ]; then
+        echo ""
+        echo "❌ ERRO: IP do servidor não configurado!"
+        echo "========================================"
+        echo ""
+        echo "⚠️  PRÉ-REQUISITO OBRIGATÓRIO:"
+        echo "   Você DEVE configurar o IP público da EC2 antes de fazer o deploy."
+        echo ""
+        echo "🔧 Para configurar o IP, execute:"
+        echo "   $0 config-ip"
+        echo ""
+        echo "📋 Como encontrar o IP público:"
+        echo "   1. Acesse o AWS Console"
+        echo "   2. Vá para EC2 > Instâncias"
+        echo "   3. Selecione sua instância"
+        echo "   4. Copie o 'IPv4 público'"
+        echo ""
+        error "Configure o IP primeiro e depois execute o deploy novamente."
+        exit 1
+    fi
+    
+    SERVER_IP=$(cat .ec2_ip)
+    log "✅ IP do servidor configurado: $SERVER_IP"
+    
+    # Perguntar se quer alterar o IP
+    read -p "🔄 Deseja alterar o IP atual ($SERVER_IP)? (s/N): " CHANGE_IP
+    if [[ $CHANGE_IP =~ ^[Ss]$ ]]; then
+        prompt_server_ip
+        SERVER_IP=$(cat .ec2_ip)
+    fi
+    
+    # CORREÇÃO AUTOMÁTICA: Criar arquivos .env se não existirem
+    log "🔧 Verificando e criando arquivos .env necessários..."
+    
+    # Criar backend/.env se não existir
+    if [ ! -f "backend/.env" ]; then
+        log "📝 Criando backend/.env..."
+        cat > backend/.env <<EOF
 # NH-Personal Backend Environment Variables
 # Configurações para produção
 
@@ -370,9 +396,15 @@ CORS_ORIGIN=http://$SERVER_IP:3000
 FRONTEND_URL=http://$SERVER_IP:3000
 BACKEND_URL=http://$SERVER_IP:3000/api
 EOF
+        success "✅ backend/.env criado"
+    else
+        log "✅ backend/.env já existe"
+    fi
 
-    # .env do frontend
-    cat > frontend/.env <<EOF
+    # Criar frontend/.env se não existir
+    if [ ! -f "frontend/.env" ]; then
+        log "📝 Criando frontend/.env..."
+        cat > frontend/.env <<EOF
 # NH-Personal Frontend Environment Variables
 # Configurações para produção
 
@@ -398,38 +430,21 @@ REACT_APP_ENABLE_ERROR_TRACKING=false
 REACT_APP_BACKEND_URL=http://$SERVER_IP:3000/api
 REACT_APP_FRONTEND_URL=http://$SERVER_IP:3000
 EOF
-
-    success "Variáveis de ambiente configuradas com IP: $SERVER_IP"
-}
-
-# Função para fazer deploy da aplicação
-deploy_application() {
-    log "🚀 Fazendo deploy da aplicação..."
-    
-    # Verificar se estamos no diretório correto
-    if [ ! -f "docker-compose.yml" ]; then
-        error "Arquivo docker-compose.yml não encontrado. Execute este script no diretório raiz do projeto."
-        exit 1
-    fi
-    
-    # Verificar se o IP já está configurado
-    if [ ! -f ".ec2_ip" ]; then
-        log "📝 IP do servidor não configurado. Solicitando..."
-        prompt_server_ip
+        success "✅ frontend/.env criado"
     else
-        SERVER_IP=$(cat .ec2_ip)
-        log "✅ IP do servidor já configurado: $SERVER_IP"
-        
-        # Perguntar se quer alterar o IP
-        read -p "🔄 Deseja alterar o IP atual ($SERVER_IP)? (s/N): " CHANGE_IP
-        if [[ $CHANGE_IP =~ ^[Ss]$ ]]; then
-            prompt_server_ip
-        fi
+        log "✅ frontend/.env já existe"
     fi
     
-    # Configurar variáveis de ambiente com o IP atual
-    SERVER_IP=$(cat .ec2_ip)
-    setup_environment
+    # CORREÇÃO AUTOMÁTICA: Fazer build do backend antes do deploy
+    log "🔨 Fazendo build do backend..."
+    if [ -f "backend/package.json" ]; then
+        cd backend
+        npm run build
+        cd ..
+        success "✅ Build do backend concluído"
+    else
+        warning "⚠️ package.json do backend não encontrado, build será feito no container"
+    fi
     
     # Verificar se o Docker está rodando
     if ! sudo systemctl is-active --quiet docker; then
@@ -469,6 +484,14 @@ deploy_application() {
             success "✅ Health check passou!"
         else
             warning "⚠️ Health check falhou, mas containers estão rodando"
+        fi
+        
+        # Testar página inicial (frontend)
+        log "🔍 Testando página inicial..."
+        if curl -f http://localhost:3000 > /dev/null 2>&1; then
+            success "✅ Página inicial carregando!"
+        else
+            warning "⚠️ Página inicial pode estar com problemas"
         fi
         
         echo ""
