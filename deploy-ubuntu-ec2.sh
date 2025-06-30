@@ -1,4 +1,4 @@
-n#!/bin/bash
+#!/bin/bash
 
 # =============================================================================
 # NH GESTÃO DE ALUNOS - SCRIPT DE DEPLOY UBUNTU EC2
@@ -77,35 +77,42 @@ show_help() {
     echo "Opções:"
     echo "  config-ip  - ⚠️  OBRIGATÓRIO: Configurar IP do servidor manualmente"
     echo "  deploy     - Fazer deploy completo da aplicação (requer IP configurado)"
-    echo "  diagnose   - Executar diagnóstico completo"
-    echo "  test       - Executar teste rápido"
-    echo "  features   - Testar funcionalidades da aplicação"
-    echo "  logs       - Mostrar logs dos containers"
-    echo "  status     - Mostrar status dos containers"
-    echo "  restart    - Reiniciar todos os containers"
-    echo "  stop       - Parar todos os containers"
-    echo "  cleanup    - Limpar containers e imagens antigas"
-    echo "  backup     - Fazer backup do banco de dados"
-    echo "  help       - Mostrar esta ajuda"
+    echo "  diagnose   - 🔍 Diagnóstico completo do sistema e aplicação"
+    echo "  test       - ⚡ Teste rápido da aplicação"
+    echo "  features   - 🧪 Testar frontend localmente (build e servidor)"
+    echo "  logs       - 📋 Mostrar logs dos containers"
+    echo "  status     - 📊 Mostrar status dos containers"
+    echo "  restart    - 🔄 Reiniciar todos os containers"
+    echo "  stop       - 🛑 Parar todos os containers"
+    echo "  cleanup    - 🧹 Limpar containers e imagens antigas"
+    echo "  backup     - 💾 Fazer backup do banco de dados"
+    echo "  help       - 📖 Mostrar esta ajuda"
     echo ""
     echo "📝 FLUXO CORRETO DE DEPLOY:"
     echo "   1. $0 config-ip     # Configurar IP público da EC2"
     echo "   2. $0 deploy        # Fazer deploy completo"
     echo "   3. $0 test          # Testar aplicação"
     echo ""
+    echo "🔍 DIAGNÓSTICO E TESTES:"
+    echo "   $0 diagnose         # Diagnóstico completo (recomendado primeiro)"
+    echo "   $0 features         # Testar frontend localmente"
+    echo "   $0 test             # Teste rápido da aplicação"
+    echo ""
     echo "Exemplos:"
     echo "  $0 config-ip  # ⚠️  PRIMEIRO: Configurar IP do servidor"
-    echo "  $0 deploy     # SEGUNDO: Fazer deploy completo"
-    echo "  $0 diagnose   # Verificar status da aplicação"
-    echo "  $0 test       # Teste rápido"
-    echo "  $0 features   # Testar funcionalidades da aplicação"
-    echo "  $0 logs       # Ver logs em tempo real"
+    echo "  $0 deploy     # SEGUNDO: Deploy completo com todas as correções"
+    echo "  $0 diagnose   # 🔍 Diagnóstico completo"
+    echo "  $0 features   # 🧪 Testar frontend"
+    echo "  $0 test       # ⚡ Teste rápido"
+    echo "  $0 logs       # 📋 Ver logs em tempo real"
     echo ""
     echo "🔧 CORREÇÕES AUTOMÁTICAS INCLUÍDAS:"
     echo "   • Criação automática de arquivos .env"
-    echo "   • Build automático do backend"
+    echo "   • Instalação automática de Node.js"
+    echo "   • Build automático do backend e frontend"
     echo "   • Configuração automática de CORS"
     echo "   • Servir frontend estático"
+    echo "   • Diagnóstico completo integrado"
     echo ""
     echo "📊 Para verificar o status: $0 status"
     echo "📋 Para ver os logs: $0 logs"
@@ -475,7 +482,7 @@ deploy_application() {
     fi
 }
 
-# Função para diagnóstico
+# Função para diagnóstico completo
 diagnose() {
     log "🔍 Executando diagnóstico completo..."
     
@@ -499,12 +506,62 @@ diagnose() {
         echo "❌ Docker Compose: Não instalado"
     fi
     
+    # Verificar Node.js
+    if command -v node &> /dev/null; then
+        echo "✅ Node.js: Instalado"
+        echo "   Versão: $(node --version)"
+    else
+        echo "❌ Node.js: Não instalado"
+    fi
+    
     # Verificar arquivo docker-compose.yml
     if [ -f "docker-compose.yml" ]; then
         echo "✅ docker-compose.yml: Encontrado"
-        sudo docker compose ps
+        if command -v docker &> /dev/null; then
+            docker compose ps
+        fi
     else
         echo "❌ docker-compose.yml: Não encontrado"
+    fi
+    
+    echo ""
+    echo "📋 VERIFICAÇÃO DE ARQUIVOS"
+    echo "=========================="
+    
+    # Verificar arquivos .env
+    if [ -f "backend/.env" ]; then
+        echo "✅ backend/.env: Encontrado"
+        echo "   📄 NODE_ENV: $(grep NODE_ENV backend/.env | cut -d'=' -f2 2>/dev/null || echo 'não configurado')"
+        echo "   📄 FRONTEND_URL: $(grep FRONTEND_URL backend/.env | cut -d'=' -f2 2>/dev/null || echo 'não configurado')"
+    else
+        echo "❌ backend/.env: Não encontrado"
+    fi
+    
+    if [ -f "frontend/.env" ]; then
+        echo "✅ frontend/.env: Encontrado"
+    else
+        echo "❌ frontend/.env: Não encontrado"
+    fi
+    
+    # Verificar build do frontend
+    if [ -d "frontend/build" ]; then
+        echo "✅ frontend/build: Encontrado"
+        echo "   📄 Arquivos: $(ls frontend/build/ | wc -l) arquivos"
+        if [ -f "frontend/build/index.html" ]; then
+            echo "   ✅ index.html: Encontrado"
+        else
+            echo "   ❌ index.html: Não encontrado"
+        fi
+    else
+        echo "❌ frontend/build: Não encontrado"
+    fi
+    
+    # Verificar build do backend
+    if [ -d "backend/dist" ]; then
+        echo "✅ backend/dist: Encontrado"
+        echo "   📄 Arquivos: $(ls backend/dist/ | wc -l) arquivos"
+    else
+        echo "❌ backend/dist: Não encontrado"
     fi
     
     echo ""
@@ -523,6 +580,8 @@ diagnose() {
     # Testar página inicial
     if curl -f http://localhost:3000 > /dev/null 2>&1; then
         echo "✅ Página inicial: OK"
+        FRONTEND_RESPONSE=$(curl -s -I http://localhost:3000 | head -1)
+        echo "   Status: $FRONTEND_RESPONSE"
     else
         echo "❌ Página inicial: FALHOU"
     fi
@@ -538,25 +597,71 @@ diagnose() {
     echo "📊 STATUS DOS CONTAINERS"
     echo "========================"
     
-    if [ -f "docker-compose.yml" ] && sudo docker compose ps | grep -q "Up"; then
-        echo "✅ Containers estão rodando"
-        sudo docker compose ps
-    else
-        echo "❌ Containers não estão rodando"
-        if [ -f "docker-compose.yml" ]; then
-            sudo docker compose ps
+    if [ -f "docker-compose.yml" ] && command -v docker &> /dev/null; then
+        if docker compose ps | grep -q "Up"; then
+            echo "✅ Containers estão rodando"
+            docker compose ps
+        else
+            echo "❌ Containers não estão rodando"
+            docker compose ps
         fi
+    else
+        echo "❌ Docker não disponível ou docker-compose.yml não encontrado"
     fi
     
     echo ""
     echo "💾 USO DE RECURSOS"
     echo "=================="
-    sudo docker stats --no-stream
+    if command -v docker &> /dev/null; then
+        docker stats --no-stream
+    else
+        echo "❌ Docker não disponível"
+    fi
     
     echo ""
     echo "📋 LOGS RECENTES"
     echo "================"
-    sudo docker compose logs --tail=20
+    if command -v docker &> /dev/null && [ -f "docker-compose.yml" ]; then
+        docker compose logs --tail=20
+    else
+        echo "❌ Docker não disponível ou docker-compose.yml não encontrado"
+    fi
+    
+    echo ""
+    echo "🎯 RECOMENDAÇÕES AUTOMÁTICAS"
+    echo "============================"
+    
+    # Verificar se precisa configurar IP
+    if [ ! -f ".ec2_ip" ]; then
+        echo "⚠️  IP não configurado: Execute '$0 config-ip'"
+    fi
+    
+    # Verificar se precisa criar arquivos .env
+    if [ ! -f "backend/.env" ] || [ ! -f "frontend/.env" ]; then
+        echo "⚠️  Arquivos .env faltando: Execute '$0 deploy' para criar automaticamente"
+    fi
+    
+    # Verificar se precisa fazer build
+    if [ ! -d "frontend/build" ]; then
+        echo "⚠️  Frontend não buildado: Execute '$0 deploy' para build automático"
+    fi
+    
+    # Verificar se containers não estão rodando
+    if command -v docker &> /dev/null && [ -f "docker-compose.yml" ]; then
+        if ! docker compose ps | grep -q "Up"; then
+            echo "⚠️  Containers não estão rodando: Execute '$0 deploy' para iniciar"
+        fi
+    fi
+    
+    echo ""
+    echo "🔧 COMANDOS ÚTEIS:"
+    echo "=================="
+    echo "• $0 config-ip     # Configurar IP do servidor"
+    echo "• $0 deploy        # Deploy completo com todas as correções"
+    echo "• $0 test          # Teste rápido da aplicação"
+    echo "• $0 logs          # Ver logs em tempo real"
+    echo "• $0 restart       # Reiniciar containers"
+    echo "• $0 cleanup       # Limpar containers e imagens"
 }
 
 # Função para teste rápido
@@ -699,6 +804,106 @@ install_nodejs() {
     fi
 }
 
+# Função para testar frontend localmente
+test_frontend() {
+    log "🧪 Testando frontend localmente..."
+    
+    echo ""
+    echo "📋 1. Verificando se o frontend pode ser buildado..."
+    
+    if [ ! -f "frontend/package.json" ]; then
+        error "❌ frontend/package.json não encontrado"
+        exit 1
+    fi
+    
+    cd frontend
+    
+    # Verificar se node_modules existe
+    if [ ! -d "node_modules" ]; then
+        log "📦 Instalando dependências do frontend..."
+        if ! npm install; then
+            error "❌ Falha na instalação das dependências do frontend"
+            exit 1
+        fi
+    fi
+    
+    # Fazer build do frontend
+    log "🔨 Fazendo build do frontend..."
+    if npm run build; then
+        success "✅ Build do frontend concluído com sucesso!"
+    else
+        error "❌ Erro no build do frontend"
+        exit 1
+    fi
+    
+    cd ..
+    
+    echo ""
+    echo "📋 2. Verificando arquivos gerados..."
+    if [ -d "frontend/build" ]; then
+        success "✅ Diretório build criado"
+        echo "   📄 Arquivos no build:"
+        ls -la frontend/build/
+        
+        if [ -f "frontend/build/index.html" ]; then
+            success "✅ index.html encontrado"
+            echo "   📄 Conteúdo do index.html:"
+            head -15 frontend/build/index.html
+        else
+            error "❌ index.html não encontrado"
+        fi
+    else
+        error "❌ Diretório build não foi criado"
+    fi
+    
+    echo ""
+    echo "📋 3. Testando servidor local..."
+    echo "🚀 Iniciando servidor de teste..."
+    
+    cd frontend/build
+    
+    # Tentar diferentes servidores
+    if command -v python3 &> /dev/null; then
+        python3 -m http.server 8080 &
+        SERVER_PID=$!
+        SERVER_CMD="python3"
+    elif command -v python &> /dev/null; then
+        python -m SimpleHTTPServer 8080 &
+        SERVER_PID=$!
+        SERVER_CMD="python"
+    elif command -v npx &> /dev/null; then
+        npx serve -s . -p 8080 &
+        SERVER_PID=$!
+        SERVER_CMD="npx serve"
+    else
+        warning "⚠️ Nenhum servidor HTTP encontrado, pulando teste local"
+        cd ../..
+        return
+    fi
+    
+    sleep 3
+    
+    echo "🔍 Testando servidor..."
+    if curl -f http://localhost:8080 > /dev/null 2>&1; then
+        success "✅ Servidor local funcionando"
+        echo "   📄 Resposta:"
+        curl -s http://localhost:8080 | head -10
+    else
+        warning "⚠️ Servidor local não está funcionando"
+    fi
+    
+    # Parar servidor
+    kill $SERVER_PID 2>/dev/null
+    
+    cd ../..
+    
+    echo ""
+    success "🎉 Teste do frontend concluído!"
+    echo "📋 Próximos passos:"
+    echo "   1. Se o build funcionou: $0 deploy"
+    echo "   2. Para diagnóstico completo: $0 diagnose"
+}
+
 # Função principal
 main() {
     # Verificar argumentos
@@ -744,6 +949,9 @@ main() {
             ;;
         "backup")
             backup_database
+            ;;
+        "features")
+            test_frontend
             ;;
         "help"|"-h"|"--help")
             show_help
