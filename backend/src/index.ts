@@ -93,14 +93,62 @@ app.use('/api/admin', adminRoutes);
 
 // Serve static files from the React app build
 const frontendBuildPath = path.join(__dirname, '../frontend/build');
+console.log('🔍 Verificando frontend build em:', frontendBuildPath);
+
 if (process.env.NODE_ENV === 'production') {
-  // Serve static files from the React app build
-  app.use(express.static(frontendBuildPath));
-  
-  // Handle React routing, return all requests to React app
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(frontendBuildPath, 'index.html'));
-  });
+  // Verificar se o diretório de build existe
+  if (require('fs').existsSync(frontendBuildPath)) {
+    console.log('✅ Frontend build encontrado, servindo arquivos estáticos');
+    
+    // Serve static files from the React app build
+    app.use(express.static(frontendBuildPath));
+    
+    // Handle React routing, return all requests to React app
+    app.get('*', (req, res) => {
+      const indexPath = path.join(frontendBuildPath, 'index.html');
+      if (require('fs').existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        console.error('❌ index.html não encontrado em:', indexPath);
+        res.status(404).json({ error: 'Frontend não encontrado' });
+      }
+    });
+  } else {
+    console.warn('⚠️ Frontend build não encontrado em:', frontendBuildPath);
+    console.log('📋 Tentando caminhos alternativos...');
+    
+    // Tentar caminhos alternativos
+    const alternativePaths = [
+      path.join(__dirname, '../../frontend/build'),
+      path.join(__dirname, '../../../frontend/build'),
+      path.join(process.cwd(), 'frontend/build')
+    ];
+    
+    let frontendFound = false;
+    for (const altPath of alternativePaths) {
+      if (require('fs').existsSync(altPath)) {
+        console.log('✅ Frontend encontrado em:', altPath);
+        app.use(express.static(altPath));
+        app.get('*', (req, res) => {
+          res.sendFile(path.join(altPath, 'index.html'));
+        });
+        frontendFound = true;
+        break;
+      }
+    }
+    
+    if (!frontendFound) {
+      console.error('❌ Frontend build não encontrado em nenhum caminho');
+      app.get('*', (req, res) => {
+        res.status(404).json({ 
+          error: 'Frontend não encontrado',
+          message: 'O build do frontend não foi encontrado. Execute: cd frontend && npm run build'
+        });
+      });
+    }
+  }
+} else {
+  console.log('🔧 Modo desenvolvimento - frontend não será servido pelo backend');
 }
 
 // Error handling middleware (apenas para rotas da API)
