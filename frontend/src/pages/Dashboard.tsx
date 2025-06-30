@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { apiService } from '../services/api';
+import { api } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -49,15 +49,15 @@ const Dashboard: React.FC = () => {
       setLoading(true);
       
       // Carregar estatísticas
-      const statsData = await apiService.getDashboardStats();
+      const statsData = await api.getDashboardStats();
       setStats(statsData);
       
       // Carregar atividade recente
-      const activityData = await apiService.getRecentActivity();
+      const activityData = await api.getRecentActivity();
       setRecentActivity(activityData);
       
       // Carregar próximas sessões
-      const sessionsData = await apiService.getUpcomingSessions();
+      const sessionsData = await api.getUpcomingSessions();
       setUpcomingSessions(sessionsData);
       
     } catch (error: any) {
