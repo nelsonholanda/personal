@@ -2,15 +2,12 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { toast } from 'react-hot-toast';
 import {
-  DollarSign,
-  Calendar,
   CheckCircle,
   XCircle,
   Clock,
   Plus,
   Search,
   Filter,
-  Download,
   Eye,
   Edit,
   CreditCard,
@@ -54,21 +51,6 @@ interface Payment {
   }>;
 }
 
-interface PaymentMethod {
-  id: number;
-  name: string;
-  description?: string;
-}
-
-interface PaymentPlan {
-  id: number;
-  name: string;
-  description?: string;
-  price: number;
-  durationWeeks: number;
-  sessionsPerWeek: number;
-}
-
 const Payments: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -88,47 +70,6 @@ const Payments: React.FC = () => {
       
       const response = await axios.get(`/api/payments?${params.toString()}`);
       return response.data.data;
-    }
-  );
-
-  // Fetch payment methods
-  const { data: paymentMethods } = useQuery(
-    'paymentMethods',
-    async () => {
-      const response = await axios.get('/api/payments/methods');
-      return response.data.data;
-    }
-  );
-
-  // Fetch payment plans
-  const { data: paymentPlans } = useQuery(
-    'paymentPlans',
-    async () => {
-      const response = await axios.get('/api/payments/plans');
-      return response.data.data;
-    }
-  );
-
-  // Mark payment as paid mutation
-  const markAsPaidMutation = useMutation(
-    async ({ paymentId, paymentDate, paymentReference }: {
-      paymentId: number;
-      paymentDate?: string;
-      paymentReference?: string;
-    }) => {
-      await axios.put(`/api/payments/${paymentId}/mark-paid`, {
-        paymentDate,
-        paymentReference
-      });
-    },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('payments');
-        toast.success('Pagamento marcado como pago!');
-      },
-      onError: () => {
-        toast.error('Erro ao marcar pagamento como pago');
-      }
     }
   );
 
@@ -190,6 +131,29 @@ const Payments: React.FC = () => {
       });
     }
   };
+
+  // Mark payment as paid mutation
+  const markAsPaidMutation = useMutation(
+    async ({ paymentId, paymentDate, paymentReference }: {
+      paymentId: number;
+      paymentDate?: string;
+      paymentReference?: string;
+    }) => {
+      await axios.put(`/api/payments/${paymentId}/mark-paid`, {
+        paymentDate,
+        paymentReference
+      });
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('payments');
+        toast.success('Pagamento marcado como pago!');
+      },
+      onError: () => {
+        toast.error('Erro ao marcar pagamento como pago');
+      }
+    }
+  );
 
   if (paymentsLoading) {
     return (

@@ -1,17 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { toast } from 'react-hot-toast';
 import {
-  Users,
-  DollarSign,
-  Calendar,
   CheckCircle,
   XCircle,
   Clock,
   Plus,
   Search,
   Filter,
-  Download,
   Eye,
   Edit,
   Trash2
@@ -40,21 +36,10 @@ interface Client {
   };
 }
 
-interface FinancialStats {
-  totalReceived: number;
-  totalPending: number;
-  totalOverdue: number;
-  totalClients: number;
-  paymentsByMethod: Record<string, { total: number; count: number }>;
-  paymentsByClient: Record<string, { total: number; count: number }>;
-}
-
 const ClientManagement: React.FC = () => {
   const [selectedClients, setSelectedClients] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [showAddClient, setShowAddClient] = useState(false);
-  const [showBulkActions, setShowBulkActions] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -64,35 +49,6 @@ const ClientManagement: React.FC = () => {
     async () => {
       const response = await axios.get(`/api/client-management?status=${statusFilter === 'all' ? '' : statusFilter}`);
       return response.data.data;
-    }
-  );
-
-  // Fetch financial stats
-  const { data: financialStats } = useQuery(
-    'financialStats',
-    async () => {
-      const response = await axios.get('/api/client-management/stats/financial');
-      return response.data.data;
-    }
-  );
-
-  // Bulk actions mutations
-  const bulkStatusMutation = useMutation(
-    async ({ clientIds, status }: { clientIds: number[]; status: string }) => {
-      await Promise.all(
-        clientIds.map(id => axios.put(`/api/client-management/${id}`, { status }))
-      );
-    },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('clients');
-        setSelectedClients([]);
-        setShowBulkActions(false);
-        toast.success('Clientes atualizados com sucesso!');
-      },
-      onError: () => {
-        toast.error('Erro ao atualizar clientes');
-      }
     }
   );
 
@@ -175,82 +131,12 @@ const ClientManagement: React.FC = () => {
           <p className="text-gray-600">Gerencie seus alunos e acompanhe pagamentos</p>
         </div>
         <button
-          onClick={() => setShowAddClient(true)}
           className="btn btn-primary"
         >
           <Plus className="w-4 h-4 mr-2" />
           Adicionar Cliente
         </button>
       </div>
-
-      {/* Financial Overview Cards */}
-      {financialStats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="card">
-            <div className="card-body">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <DollarSign className="w-6 h-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Recebido</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(financialStats.totalReceived)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-body">
-              <div className="flex items-center">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <Clock className="w-6 h-6 text-yellow-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Pendente</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(financialStats.totalPending)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-body">
-              <div className="flex items-center">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <XCircle className="w-6 h-6 text-red-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Em Atraso</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(financialStats.totalOverdue)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-body">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Users className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Clientes Ativos</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {financialStats.totalClients}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Filters and Search */}
       <div className="card">

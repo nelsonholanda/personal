@@ -24,11 +24,11 @@ RUN cd frontend && npm install
 # Copiar código do backend
 COPY backend/ ./
 
+# Build do backend
+RUN npm run build
+
 # Copiar código do frontend
 COPY frontend/ ./frontend/
-
-# Copiar server.js da raiz do projeto
-COPY server.js ./
 
 # Gerar cliente Prisma
 RUN npx prisma generate
@@ -40,4 +40,4 @@ RUN cd frontend && npm run build
 EXPOSE 3000
 
 # Comando para iniciar a aplicação
-CMD ["node", "server.js"] 
+CMD ["node", "dist/index.js"] 

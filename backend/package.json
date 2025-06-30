@@ -2,10 +2,10 @@
   "name": "nh-personal-backend",
   "version": "1.0.0",
   "description": "NH-Personal Backend API",
-  "main": "server.js",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node dist/index.js",
+    "dev": "nodemon src/index.ts",
     "build": "tsc",
     "test": "jest",
     "test:watch": "jest --watch",

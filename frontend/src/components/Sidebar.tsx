@@ -1,14 +1,5 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import {
-  Home,
-  Users,
-  DollarSign,
-  Calendar,
-  TrendingUp,
-  Settings,
-  LogOut
-} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Sidebar: React.FC = () => {
@@ -23,10 +14,6 @@ const Sidebar: React.FC = () => {
     { path: '/password-management', label: 'Gerenciar Usuários', icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z' },
     { path: '/profile', label: 'Perfil', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
   ];
-
-  const handleLogout = () => {
-    logout();
-  };
 
   return (
     <div className="bg-primary-900 text-white w-64 min-h-screen p-4">

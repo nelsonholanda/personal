@@ -46,8 +46,6 @@ const PasswordManagement: React.FC = () => {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [pendingForceUserId, setPendingForceUserId] = useState<number | null>(null);
 
-  const queryClient = useQueryClient();
-
   // Buscar usuários (para admin)
   const { data: users } = useQuery({
     queryKey: ['users'],
