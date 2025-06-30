@@ -23,29 +23,15 @@ class DatabaseService {
     if (this.secretsLoaded) return;
 
     try {
-      // Tentar carregar do AWS Secrets Manager primeiro
-      if (process.env.AWS_SECRET_NAME) {
-        console.log('🔐 Carregando configurações do AWS Secrets Manager...');
-        const secrets = await awsSecretsManager.getSecret(process.env.AWS_SECRET_NAME);
-        
-        this.config = {
-          host: secrets.host || process.env.RDS_HOST || process.env.DB_HOST || '',
-          port: parseInt(secrets.port || process.env.RDS_PORT || process.env.DB_PORT || '3306'),
-          username: secrets.username || process.env.RDS_USERNAME || process.env.DB_USERNAME || '',
-          password: secrets.password || process.env.RDS_PASSWORD || process.env.DB_PASSWORD || '',
-          database: secrets.database || secrets.dbname || process.env.RDS_DATABASE || process.env.DB_NAME || '',
-        };
-      } else {
-        // Fallback para variáveis de ambiente
-        console.log('🔐 Carregando configurações das variáveis de ambiente...');
-        this.config = {
-          host: process.env.RDS_HOST || process.env.DB_HOST || '',
-          port: parseInt(process.env.RDS_PORT || process.env.DB_PORT || '3306'),
-          username: process.env.RDS_USERNAME || process.env.DB_USERNAME || '',
-          password: process.env.RDS_PASSWORD || process.env.DB_PASSWORD || '',
-          database: process.env.RDS_DATABASE || process.env.DB_NAME || '',
-        };
-      }
+      // Carregar das variáveis de ambiente
+      console.log('🔐 Carregando configurações das variáveis de ambiente...');
+      this.config = {
+        host: process.env.RDS_HOST || process.env.DB_HOST || '',
+        port: parseInt(process.env.RDS_PORT || process.env.DB_PORT || '3306'),
+        username: process.env.RDS_USERNAME || process.env.DB_USERNAME || '',
+        password: process.env.RDS_PASSWORD || process.env.DB_PASSWORD || '',
+        database: process.env.RDS_DATABASE || process.env.DB_NAME || '',
+      };
 
       // Validação das configurações
       if (!this.config.host || !this.config.username || !this.config.password || !this.config.database) {

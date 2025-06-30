@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import passwordService from '../services/passwordService';
 import jwt from 'jsonwebtoken';
-import awsSecretsManager from '../services/awsSecretsManager';
+// import awsSecretsManager from '../services/awsSecretsManager';
 
 const prisma = new PrismaClient();
 

@@ -46,6 +46,8 @@ model User {
   notifications     Notification[]
   financialReports  FinancialReport[]
   passwordHistory   PasswordHistory[]
+  adminLogs         AdminLog[] @relation("AdminLogAdmin")
+  targetUserLogs    AdminLog[] @relation("AdminLogTargetUser")
 
   @@map("users")
 }
@@ -419,15 +421,15 @@ model FinancialReport {
 }
 
 model AdminLog {
-  id         Int      @id @default(autoincrement())
-  adminId    Int      @map("admin_id")
-  action     String   @db.VarChar(255)
-  targetUserId Int?   @map("target_user_id")
-  details    String?  @db.Text
-  createdAt  DateTime @default(now()) @map("created_at")
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @map("admin_id")
+  action       String   @db.VarChar(255)
+  targetUserId Int?     @map("target_user_id")
+  details      String?  @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  admin      User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  targetUser User?    @relation(fields: [targetUserId], references: [id], onDelete: Cascade)
+  admin        User     @relation("AdminLogAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+  targetUser   User?    @relation("AdminLogTargetUser", fields: [targetUserId], references: [id], onDelete: Cascade)
 
   @@map("admin_logs")
 }
