@@ -22,14 +22,20 @@ class DatabaseService {
    */
   async initialize(): Promise<void> {
     try {
-      // Configuração do banco de dados
-      this.config = {
-        host: process.env.RDS_HOST || process.env.DB_HOST || 'localhost',
-        port: parseInt(process.env.RDS_PORT || process.env.DB_PORT || '3306'),
-        username: process.env.RDS_USERNAME || process.env.DB_USERNAME || 'root',
-        password: this.decryptPassword(process.env.RDS_PASSWORD || process.env.DB_PASSWORD || ''),
-        database: process.env.RDS_DATABASE || process.env.DB_DATABASE || 'personal_trainer_db'
-      };
+      // Se DATABASE_URL estiver disponível, usar diretamente
+      if (process.env.DATABASE_URL) {
+        console.log('✅ Usando DATABASE_URL para conexão');
+        this.config = this.parseDatabaseUrl(process.env.DATABASE_URL);
+      } else {
+        // Configuração do banco de dados via variáveis individuais
+        this.config = {
+          host: process.env.RDS_HOST || process.env.DB_HOST || 'localhost',
+          port: parseInt(process.env.RDS_PORT || process.env.DB_PORT || '3306'),
+          username: process.env.RDS_USERNAME || process.env.DB_USERNAME || 'root',
+          password: this.decryptPassword(process.env.RDS_PASSWORD || process.env.DB_PASSWORD || ''),
+          database: process.env.RDS_DATABASE || process.env.DB_DATABASE || 'personal_trainer_db'
+        };
+      }
 
       // Validar configuração
       if (!this.config.host || !this.config.username || !this.config.password || !this.config.database) {
@@ -37,9 +43,30 @@ class DatabaseService {
       }
 
       console.log('✅ Configuração do banco de dados carregada com sucesso');
+      console.log(`📍 Host: ${this.config.host}`);
+      console.log(`👤 Usuário: ${this.config.username}`);
+      console.log(`🗄️ Database: ${this.config.database}`);
     } catch (error) {
       console.error('❌ Erro ao inicializar configuração do banco:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Faz parse da DATABASE_URL para extrair configurações individuais
+   */
+  private parseDatabaseUrl(databaseUrl: string): DatabaseConfig {
+    try {
+      const url = new URL(databaseUrl);
+      return {
+        host: url.hostname,
+        port: parseInt(url.port || '3306'),
+        username: url.username,
+        password: decodeURIComponent(url.password),
+        database: url.pathname.substring(1) // Remove a barra inicial
+      };
+    } catch (error) {
+      throw new Error('DATABASE_URL inválida');
     }
   }
 

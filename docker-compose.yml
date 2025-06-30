@@ -10,6 +10,11 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_URL=mysql://admin:Rdms95gn!@personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com:3306/personal_trainer_db
+      - RDS_HOST=personal-db.cbkc0cg2c7in.us-east-2.rds.amazonaws.com
+      - RDS_PORT=3306
+      - RDS_USERNAME=admin
+      - RDS_PASSWORD=Rdms95gn!
+      - RDS_DATABASE=personal_trainer_db
       - JWT_ACCESS_TOKEN_SECRET=nh-personal-access-token-secret-2024
       - JWT_REFRESH_TOKEN_SECRET=nh-personal-refresh-token-secret-2024
       - ENCRYPTION_KEY=nh-personal-encryption-key-2024
