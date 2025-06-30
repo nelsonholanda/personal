@@ -48,7 +48,9 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    service: 'NH Gestão de Alunos - Container Único'
+    service: 'NH Gestão de Alunos - Container Único',
+    version: '2.0',
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
@@ -92,6 +94,7 @@ app.listen(PORT, () => {
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🌐 Frontend: http://localhost:${PORT}`);
   console.log(`🔧 API: http://localhost:${PORT}/api`);
+  console.log(`🔐 Segurança: Criptografia AES-256-CBC ativa`);
 });
 
 module.exports = app; 

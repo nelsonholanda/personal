@@ -1,4 +1,5 @@
-import awsSecretsManager from './awsSecretsManager';
+import { PrismaClient } from '@prisma/client';
+import encryptionService from './encryptionService';
 
 interface DatabaseConfig {
   host: string;
@@ -10,54 +11,69 @@ interface DatabaseConfig {
 
 class DatabaseService {
   private config: DatabaseConfig | null = null;
-  private secretsLoaded = false;
+  private prismaClient: PrismaClient | null = null;
 
   constructor() {
-    // Configuração inicial será carregada quando necessário
+    this.initialize();
   }
 
   /**
-   * Carrega as configurações do banco de dados
+   * Inicializa a configuração do banco de dados
    */
-  private async loadConfig(): Promise<void> {
-    if (this.secretsLoaded) return;
-
+  async initialize(): Promise<void> {
     try {
-      // Carregar das variáveis de ambiente
-      console.log('🔐 Carregando configurações das variáveis de ambiente...');
+      // Configuração do banco de dados
       this.config = {
-        host: process.env.RDS_HOST || process.env.DB_HOST || '',
+        host: process.env.RDS_HOST || process.env.DB_HOST || 'localhost',
         port: parseInt(process.env.RDS_PORT || process.env.DB_PORT || '3306'),
-        username: process.env.RDS_USERNAME || process.env.DB_USERNAME || '',
-        password: process.env.RDS_PASSWORD || process.env.DB_PASSWORD || '',
-        database: process.env.RDS_DATABASE || process.env.DB_NAME || '',
+        username: process.env.RDS_USERNAME || process.env.DB_USERNAME || 'root',
+        password: this.decryptPassword(process.env.RDS_PASSWORD || process.env.DB_PASSWORD || ''),
+        database: process.env.RDS_DATABASE || process.env.DB_DATABASE || 'personal_trainer_db'
       };
 
-      // Validação das configurações
+      // Validar configuração
       if (!this.config.host || !this.config.username || !this.config.password || !this.config.database) {
-        throw new Error('Configurações de banco de dados incompletas');
+        throw new Error('Configuração incompleta do banco de dados');
       }
 
-      this.secretsLoaded = true;
-      console.log('✅ Configurações de banco de dados carregadas com sucesso');
-      console.log(`📍 Host: ${this.config.host}`);
-      console.log(`👤 Usuário: ${this.config.username}`);
-      console.log(`🗄️ Database: ${this.config.database}`);
-
+      console.log('✅ Configuração do banco de dados carregada com sucesso');
     } catch (error) {
-      console.error('❌ Erro ao carregar configurações do banco:', error);
-      throw new Error('Falha ao carregar configurações do banco de dados');
+      console.error('❌ Erro ao inicializar configuração do banco:', error);
+      throw error;
     }
   }
 
   /**
-   * Obtém a URL de conexão do banco de dados
+   * Descriptografa a senha do banco se estiver criptografada
    */
-  async getDatabaseURL(): Promise<string> {
-    await this.loadConfig();
-    
+  private decryptPassword(password: string): string {
+    try {
+      if (encryptionService.isEncrypted(password)) {
+        return encryptionService.decryptDatabasePassword(password);
+      }
+      return password;
+    } catch (error) {
+      console.warn('⚠️ Erro ao descriptografar senha, usando senha em texto plano');
+      return password;
+    }
+  }
+
+  /**
+   * Obtém a configuração do banco de dados
+   */
+  getDatabaseConfig(): DatabaseConfig {
     if (!this.config) {
-      throw new Error('Configurações de banco não carregadas');
+      throw new Error('Configuração do banco de dados não inicializada');
+    }
+    return this.config;
+  }
+
+  /**
+   * Gera a URL de conexão do banco de dados
+   */
+  getDatabaseUrl(): string {
+    if (!this.config) {
+      throw new Error('Configuração do banco de dados não inicializada');
     }
 
     const { host, port, username, password, database } = this.config;
@@ -69,28 +85,28 @@ class DatabaseService {
   }
 
   /**
-   * Obtém a configuração do banco de dados
+   * Obtém o cliente Prisma
    */
-  async getDatabaseConfig(): Promise<DatabaseConfig> {
-    await this.loadConfig();
-    
-    if (!this.config) {
-      throw new Error('Configurações de banco não carregadas');
+  async getPrismaClient(): Promise<PrismaClient> {
+    if (!this.prismaClient) {
+      try {
+        // Configurar variável de ambiente para o Prisma
+        process.env.DATABASE_URL = this.getDatabaseUrl();
+        
+        this.prismaClient = new PrismaClient({
+          log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+        });
+
+        // Testar conexão
+        await this.prismaClient.$connect();
+        console.log('✅ Conexão com banco de dados estabelecida');
+      } catch (error) {
+        console.error('❌ Erro ao conectar com banco de dados:', error);
+        throw error;
+      }
     }
 
-    return { ...this.config };
-  }
-
-  /**
-   * Verifica se a conexão está configurada
-   */
-  async isConfigured(): Promise<boolean> {
-    try {
-      await this.loadConfig();
-      return !!(this.config?.host && this.config?.username && this.config?.password);
-    } catch (error) {
-      return false;
-    }
+    return this.prismaClient;
   }
 
   /**
@@ -98,24 +114,11 @@ class DatabaseService {
    */
   async testConnection(): Promise<boolean> {
     try {
-      const { PrismaClient } = require('@prisma/client');
-      const databaseURL = await this.getDatabaseURL();
-      
-      const prisma = new PrismaClient({
-        datasources: {
-          db: {
-            url: databaseURL,
-          },
-        },
-      });
-
-      await prisma.$connect();
-      await prisma.$disconnect();
-      
-      console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
+      const prisma = await this.getPrismaClient();
+      await prisma.$queryRaw`SELECT 1`;
       return true;
     } catch (error) {
-      console.error('❌ Erro ao conectar com o banco de dados:', error);
+      console.error('❌ Teste de conexão falhou:', error);
       return false;
     }
   }
@@ -123,65 +126,40 @@ class DatabaseService {
   /**
    * Executa migrações do banco de dados
    */
-  async runMigrations(): Promise<boolean> {
+  async runMigrations(): Promise<void> {
     try {
+      console.log('🔄 Executando migrações do banco de dados...');
       const { execSync } = require('child_process');
-      
-      // Obter URL do banco
-      const databaseURL = await this.getDatabaseURL();
-      
-      // Definir a URL do banco como variável de ambiente
-      process.env.DATABASE_URL = databaseURL;
-      
-      console.log('🔄 Executando migrações do Prisma...');
-      
-      // Executar migrações do Prisma
-      execSync('npx prisma migrate deploy', { 
-        stdio: 'inherit',
-        env: { ...process.env, DATABASE_URL: databaseURL }
-      });
-      
-      console.log('✅ Migrações executadas com sucesso!');
-      return true;
+      execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+      console.log('✅ Migrações executadas com sucesso');
     } catch (error) {
       console.error('❌ Erro ao executar migrações:', error);
-      return false;
+      throw error;
     }
   }
 
   /**
-   * Gera o cliente Prisma com a configuração correta
+   * Verifica se a configuração está válida
    */
-  async getPrismaClient() {
-    const { PrismaClient } = require('@prisma/client');
-    const databaseURL = await this.getDatabaseURL();
-    
-    return new PrismaClient({
-      datasources: {
-        db: {
-          url: databaseURL,
-        },
-      },
-      log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-    });
+  isConfigured(): boolean {
+    return !!(this.config?.host && this.config?.username && this.config?.password);
   }
 
   /**
-   * Inicializa o serviço de banco de dados
+   * Fecha a conexão com o banco de dados
    */
-  async initialize(): Promise<void> {
-    console.log('🔧 Inicializando serviço de banco de dados...');
-    
-    // Carregar configurações
-    await this.loadConfig();
-    
-    // Testar conexão
-    const isConnected = await this.testConnection();
-    if (!isConnected) {
-      throw new Error('Não foi possível conectar ao banco de dados');
+  async disconnect(): Promise<void> {
+    if (this.prismaClient) {
+      await this.prismaClient.$disconnect();
+      this.prismaClient = null;
     }
-    
-    console.log('✅ Serviço de banco de dados inicializado com sucesso');
+  }
+
+  /**
+   * Criptografa uma senha para armazenamento seguro
+   */
+  encryptPassword(password: string): string {
+    return encryptionService.encryptDatabasePassword(password);
   }
 }
 

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import databaseService from '../services/databaseService';
+import { PaymentStatus, AppointmentStatus } from '@prisma/client';
 
 export const dashboardController = {
   // Obter estatísticas do dashboard
@@ -27,14 +28,14 @@ export const dashboardController = {
             gte: startOfMonth,
             lte: endOfMonth
           },
-          status: 'completed'
+          status: PaymentStatus.paid
         },
         _sum: {
           amount: true
         }
       });
 
-      const monthlyRevenue = monthlyPayments._sum.amount || 0;
+      const monthlyRevenue = monthlyPayments._sum?.amount || 0;
 
       // Contar sessões de hoje
       const today = new Date();
@@ -44,7 +45,7 @@ export const dashboardController = {
 
       const todaySessions = await prisma.appointment.count({
         where: {
-          date: {
+          appointmentDate: {
             gte: today,
             lt: tomorrow
           }
@@ -54,7 +55,7 @@ export const dashboardController = {
       // Contar pagamentos pendentes
       const pendingPayments = await prisma.payment.count({
         where: {
-          status: 'pending'
+          status: PaymentStatus.pending
         }
       });
 
@@ -119,7 +120,7 @@ export const dashboardController = {
       // Buscar próximas sessões (próximos 7 dias)
       const upcomingSessions = await prisma.appointment.findMany({
         where: {
-          date: {
+          appointmentDate: {
             gte: new Date()
           }
         },
@@ -131,7 +132,7 @@ export const dashboardController = {
           }
         },
         orderBy: {
-          date: 'asc'
+          appointmentDate: 'asc'
         },
         take: 10
       });
@@ -139,8 +140,8 @@ export const dashboardController = {
       const formattedSessions = upcomingSessions.map((session: any) => ({
         id: session.id,
         clientName: session.client.name,
-        date: session.date.toISOString().split('T')[0],
-        time: session.time,
+        date: session.appointmentDate.toISOString().split('T')[0],
+        time: session.appointmentTime,
         status: session.status
       }));
 

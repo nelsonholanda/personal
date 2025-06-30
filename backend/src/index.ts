@@ -138,7 +138,7 @@ const startServer = async () => {
       
       if (process.env.NODE_ENV === 'development') {
         console.log(`👤 Admin user: nholanda`);
-        console.log(`🔑 Admin password: rdms95gn`);
+        console.log(`🔑 Admin password: [PROTECTED]`);
       }
     });
   } catch (error) {

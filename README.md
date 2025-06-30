@@ -1,210 +1,215 @@
-# NH Gestão de Alunos
+# 🏋️ NH Gestão de Alunos
 
-Sistema completo para gerenciamento de alunos e personal trainers, desenvolvido com tecnologias modernas e focado em usabilidade e eficiência.
+Sistema completo para gestão de alunos e personal trainers, desenvolvido com React, Node.js, TypeScript e MySQL.
 
-## 🚀 Deploy Rápido
+## 🚀 Funcionalidades
+
+### 👥 Gestão de Usuários
+- **Cadastro de Personal Trainers** com perfis completos
+- **Gestão de Clientes** com histórico e progresso
+- **Sistema de Autenticação** seguro com JWT
+- **Controle de Acesso** por roles (admin, trainer, client)
+
+### 💰 Gestão Financeira
+- **Controle de Pagamentos** com status e histórico
+- **Planos de Pagamento** personalizados
+- **Relatórios Financeiros** detalhados
+- **Notificações** de pagamentos pendentes
+
+### 📅 Agendamento
+- **Sistema de Agendamentos** com horários flexíveis
+- **Sessões Online/Offline** com links de reunião
+- **Lembretes Automáticos** para clientes
+- **Calendário Integrado** com visualização clara
+
+### 🏃‍♂️ Treinamento
+- **Planos de Treino** personalizados
+- **Exercícios** com descrições e vídeos
+- **Acompanhamento de Progresso** com medições
+- **Histórico de Treinos** completo
+
+### 📊 Dashboard
+- **Estatísticas em Tempo Real** de clientes e receita
+- **Atividade Recente** com timeline
+- **Próximas Sessões** organizadas
+- **Métricas de Performance** detalhadas
+
+## 🔐 Melhorias de Segurança Implementadas
+
+### ✅ Criptografia de Senhas
+- **Algoritmo:** AES-256-CBC
+- **Chave:** 256 bits (32 bytes)
+- **IV:** 128 bits (16 bytes)
+- **Compatibilidade:** Total com autenticações existentes
+
+### 🛡️ Proteção de Dados Sensíveis
+- **Senhas de Banco:** Criptografadas automaticamente
+- **Configurações:** Variáveis de ambiente seguras
+- **Logs:** Senhas mascaradas em logs
+- **Backup:** Configurações protegidas
+
+### 🔑 Geração de Senhas Seguras
+- **Complexidade:** Maiúsculas, minúsculas, números, símbolos
+- **Tamanho:** Configurável (padrão: 16 caracteres)
+- **Embaralhamento:** Algoritmo adicional de segurança
+
+### 📋 Scripts de Segurança
+```bash
+# Testar funcionalidades de criptografia
+npm run test:encryption
+
+# Migrar senhas para criptografia (quando necessário)
+npm run encrypt:passwords
+```
+
+## 🛠️ Tecnologias
+
+### Frontend
+- **React 18** com TypeScript
+- **Tailwind CSS** para estilização
+- **React Router** para navegação
+- **React Hot Toast** para notificações
+- **Axios** para requisições HTTP
+
+### Backend
+- **Node.js** com TypeScript
+- **Express.js** para API REST
+- **Prisma ORM** para banco de dados
+- **JWT** para autenticação
+- **bcrypt** para hash de senhas
+- **AES-256-CBC** para criptografia
+
+### Banco de Dados
+- **MySQL** (RDS AWS)
+- **Prisma Migrations** para versionamento
+- **Relacionamentos** otimizados
+
+### Infraestrutura
+- **Docker** para containerização
+- **Docker Compose** para orquestração
+- **AWS RDS** para banco de dados
+- **EC2** para hospedagem
+
+## 🚀 Como Executar
 
 ### Pré-requisitos
+- Node.js 18+
+- Docker e Docker Compose
+- MySQL 8.0+
 
-* Ubuntu Server 20.04 ou superior
-* Instância EC2 t3.medium ou superior
-* Security Groups configurados para portas 22, 80, 443, 3000, 3001, 3306
-
-### Deploy Automático
-
+### 1. Clone o repositório
 ```bash
-# 1. Conectar à EC2 Ubuntu
-ssh -i ~/.ssh/sua-chave.pem ubuntu@<IP-DA-EC2>
-
-# 2. Clonar e executar
-git clone https://github.com/nelsonholanda/personal.git projeto-personal
+git clone <repository-url>
 cd projeto-personal
-chmod +x deploy-ubuntu-ec2.sh
-./deploy-ubuntu-ec2.sh deploy
 ```
 
-### Comandos Disponíveis
-
+### 2. Configure as variáveis de ambiente
 ```bash
-./deploy-ubuntu-ec2.sh deploy    # Deploy completo
-./deploy-ubuntu-ec2.sh test      # Teste rápido
-./deploy-ubuntu-ec2.sh features  # Teste completo das funcionalidades
-./deploy-ubuntu-ec2.sh diagnose  # Diagnóstico completo
-./deploy-ubuntu-ec2.sh logs      # Ver logs
-./deploy-ubuntu-ec2.sh status    # Status dos containers
-./deploy-ubuntu-ec2.sh restart   # Reiniciar
-./deploy-ubuntu-ec2.sh stop      # Parar
-./deploy-ubuntu-ec2.sh cleanup   # Limpar
-./deploy-ubuntu-ec2.sh backup    # Backup do banco
-./deploy-ubuntu-ec2.sh help      # Ajuda
+cp env.example .env
+# Edite o arquivo .env com suas configurações
 ```
 
-## 🌐 URLs da Aplicação
+### 3. Execute com Docker
+```bash
+# Build e start da aplicação
+docker-compose up --build
 
-Após o deploy bem-sucedido:
+# Acesse: http://localhost:3000
+```
 
-- **Frontend**: `http://<IP-DA-EC2>:3000`
-- **Backend**: `http://<IP-DA-EC2>:3001`
-- **Health Check**: `http://<IP-DA-EC2>:3001/health`
+### 4. Ou execute localmente
+```bash
+# Backend
+cd backend
+npm install
+npm run dev
 
-## 👤 Credenciais de Administrador
-
-- **Email**: nholanda@nhpersonal.com
-- **Senha**: P10r1988!
+# Frontend (em outro terminal)
+cd frontend
+npm install
+npm start
+```
 
 ## 📁 Estrutura do Projeto
 
 ```
 projeto-personal/
-├── backend/                 # API Node.js + TypeScript
+├── backend/                 # API Node.js/Express
 │   ├── src/
 │   │   ├── controllers/     # Controladores da API
 │   │   ├── routes/          # Rotas da API
-│   │   ├── services/        # Serviços (DB, AWS, etc.)
-│   │   └── middleware/      # Middlewares
+│   │   ├── services/        # Serviços (DB, Criptografia)
+│   │   ├── middleware/      # Middlewares (Auth, Validação)
+│   │   └── config/          # Configurações
 │   ├── prisma/              # Schema e migrações do banco
-│   └── Dockerfile           # Container do backend
-├── frontend/                # React + TypeScript
+│   └── scripts/             # Scripts de utilidade
+├── frontend/                # Aplicação React
 │   ├── src/
-│   │   ├── components/      # Componentes React
+│   │   ├── components/      # Componentes reutilizáveis
 │   │   ├── pages/           # Páginas da aplicação
-│   │   └── contexts/        # Contextos React
-│   └── Dockerfile           # Container do frontend
-├── database/                # Scripts de inicialização do banco
-├── docker-compose.yml       # Orquestração dos containers
-├── deploy-ubuntu-ec2.sh     # Script único de deploy
-├── README_UBUNTU_EC2.md     # Documentação completa
-├── DEPLOY_SIMPLES.md        # Instruções rápidas
-└── env.example              # Exemplo de variáveis de ambiente
+│   │   ├── services/        # Serviços de API
+│   │   ├── contexts/        # Contextos React
+│   │   └── config/          # Configurações
+│   └── public/              # Arquivos estáticos
+├── docker-compose.yml       # Configuração Docker
+├── Dockerfile              # Imagem Docker
+└── README.md               # Documentação
 ```
 
-## 🔧 Funcionalidades
+## 🔧 Scripts Disponíveis
 
-* **Autenticação:** Login/registro de usuários
-* **Gestão de Clientes:** Cadastro e controle de clientes
-* **Pagamentos:** Controle de pagamentos e faturas
-* **Dashboard:** Estatísticas e relatórios
-* **Perfis:** Perfis de trainer e cliente
-
-## 🔒 Segurança
-
-* JWT para autenticação
-* AWS Secrets Manager para credenciais
-* Criptografia de senhas
-* Rate limiting
-* CORS configurado
-* Firewall UFW configurado automaticamente
-
-## 🐳 Docker
-
-### Comandos Úteis
-
+### Backend
 ```bash
-# Ver status dos containers
-sudo docker-compose ps
-
-# Ver logs
-sudo docker-compose logs -f
-
-# Parar serviços
-sudo docker-compose down
-
-# Reiniciar backend
-sudo docker-compose restart backend
-
-# Limpar containers órfãos
-sudo docker-compose down --remove-orphans
+npm run dev          # Desenvolvimento com nodemon
+npm run build        # Compilar TypeScript
+npm run test         # Executar testes
+npm run test:encryption # Testar criptografia
+npm run encrypt:passwords # Migrar senhas
 ```
 
-## 🐛 Solução de Problemas
-
-### Problema: Docker não está instalado
-O script instala automaticamente o Docker. Se houver problemas:
-
+### Frontend
 ```bash
-sudo apt update
-sudo apt install -y docker.io
-sudo systemctl start docker
-sudo systemctl enable docker
-sudo usermod -aG docker $USER
-newgrp docker
+npm start           # Desenvolvimento
+npm run build       # Build de produção
+npm test            # Executar testes
 ```
 
-### Problema: Containers não iniciam
-```bash
-# Verificar logs
-./deploy-ubuntu-ec2.sh logs
+## 📊 Status do Projeto
 
-# Reiniciar
-./deploy-ubuntu-ec2.sh restart
+### ✅ Implementado
+- [x] Sistema de autenticação completo
+- [x] Gestão de usuários (admin, trainer, client)
+- [x] Dashboard com estatísticas
+- [x] Gestão de clientes
+- [x] Sistema de pagamentos
+- [x] Agendamento de sessões
+- [x] Planos de treino
+- [x] Criptografia de dados sensíveis
+- [x] Docker e deploy automatizado
+- [x] Testes de segurança
 
-# Se não funcionar, fazer deploy novamente
-./deploy-ubuntu-ec2.sh deploy
-```
+### 🔄 Em Desenvolvimento
+- [ ] Notificações push
+- [ ] Relatórios avançados
+- [ ] Integração com APIs externas
+- [ ] App mobile
 
-### Problema: Backend não responde
-```bash
-# Verificar logs do backend
-sudo docker-compose logs backend
+## 🤝 Contribuição
 
-# Verificar se o banco está acessível
-sudo docker-compose exec backend npx prisma db push
-```
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
 
-## 📈 Backup
+## 📄 Licença
 
-### Backup automático do banco:
-```bash
-./deploy-ubuntu-ec2.sh backup
-```
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
-Os backups são salvos em `/var/log/nh-personal/backups/`
+## 📞 Suporte
 
-## 🔄 Atualizações
-
-Para atualizar a aplicação:
-
-```bash
-# Fazer pull das mudanças
-git pull origin main
-
-# Reconstruir e reiniciar
-./deploy-ubuntu-ec2.sh stop
-./deploy-ubuntu-ec2.sh deploy
-```
-
-## 📞 Comandos Úteis
-
-### Acessar container específico:
-```bash
-# Backend
-sudo docker-compose exec backend bash
-
-# MySQL
-sudo docker-compose exec mysql mysql -u root -p
-```
-
-### Ver uso de recursos:
-```bash
-sudo docker stats
-```
-
-### Verificar portas em uso:
-```bash
-sudo netstat -tlnp | grep -E ':(80|443|3000|3001|3306)'
-```
-
-## ⚠️ Importante
-
-- **Sistema**: Use Ubuntu Server para melhor compatibilidade
-- **Security Groups**: Configure as portas necessárias na AWS
-- **Credenciais**: Altere as senhas após o primeiro acesso
-- **Backup**: Configure backup automático para produção
+Para suporte, envie um email para [seu-email@exemplo.com] ou abra uma issue no GitHub.
 
 ---
 
-**NH Gestão de Alunos** - Sistema completo para gerenciamento de alunos e personal trainers
-
-## Sobre
-
-Sistema de gerenciamento completo para personal trainers desenvolvido com Node.js, React, TypeScript e Docker. 
+**Desenvolvido com ❤️ para facilitar a gestão de personal trainers e seus clientes.** 
